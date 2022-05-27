@@ -1,3 +1,7 @@
 .DS_Store
 .idea
 .vscode
+examples/*.wasm
+wasmerexec/example/wasmerexec
+wasmtimexec/example/wasmtimexec
+wazeroexec/example/wazeroexec

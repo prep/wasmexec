@@ -155,7 +155,7 @@ func NewModuleGo(instance Instance) *ModuleGo {
 
 									a, ok := args[0].(*Uint8Array)
 									if !ok {
-										mod.instance.Error("crypto.getRandomValues: %T: not an Uint8Array", args[0])
+										mod.instance.Error("crypto.getRandomValues: %T: not type Uint8Array", args[0])
 										return 0
 									}
 
@@ -411,10 +411,6 @@ func (mod *ModuleGo) storeValue(addr int32, v any) error {
 		return mod.instance.SetFloat64(addr, num)
 	}
 
-	if v == nil {
-		mod.instance.Debug("   storeValue vnil=%v", (v == nil))
-	}
-
 	// Check for specific values that don't require storing anything in the
 	// ids and values map.
 	switch v {
@@ -424,13 +420,6 @@ func (mod *ModuleGo) storeValue(addr int32, v any) error {
 		return setNaN(3)
 	case false:
 		return setNaN(4)
-	}
-
-	if rf := reflect.ValueOf(v); rf.Kind() == reflect.Ptr {
-		if rf.IsNil() {
-			mod.instance.Debug("   storeValue(nil detected!)", v)
-			return mod.instance.SetFloat64(addr, 0)
-		}
 	}
 
 	// Create a unique signature of the value.
@@ -480,8 +469,6 @@ func (mod *ModuleGo) storeValue(addr int32, v any) error {
 
 // loadSlice returns a byte slice that is referenced by the specified address.
 func (mod *ModuleGo) loadSlice(addr int32) ([]byte, error) {
-	mod.instance.Debug("   loadSlice")
-
 	a, err := mod.instance.GetInt64(addr)
 	if err != nil {
 		return nil, err
@@ -1276,7 +1263,7 @@ func (mod *ModuleGo) CopyBytesToGo(sp int32) {
 
 		src, ok := v.(*Uint8Array)
 		if !ok {
-			return fmt.Errorf("src: %T not type []byte", v)
+			return fmt.Errorf("src: %T not type Uint8Array", v)
 		}
 
 		if len(dst) == 0 || len(src.data) == 0 {
@@ -1304,7 +1291,7 @@ func (mod *ModuleGo) CopyBytesToJS(sp int32) {
 
 		dst, ok := v.(*Uint8Array)
 		if !ok {
-			return fmt.Errorf("dst: %T not type []byte", v)
+			return fmt.Errorf("dst: %T not type Uint8Array", v)
 		}
 
 		src, err := mod.loadSlice(sp + 16)
