@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/prep/wasmexec"
 	"github.com/prep/wasmexec/wazeroexec"
 
 	"github.com/tetratelabs/wazero"
@@ -19,7 +20,7 @@ import (
 var progname = filepath.Base(os.Args[0])
 
 type Instance struct {
-	*wazeroexec.Memory
+	wasmexec.Memory
 	spFn     api.Function
 	resumeFn api.Function
 }

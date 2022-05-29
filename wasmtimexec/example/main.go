@@ -112,7 +112,7 @@ func run(filename string) error {
 		return errors.New("mem: export is not memory")
 	}
 
-	instance.Memory = mem.UnsafeData(store)
+	instance.Memory = wasmexec.NewMemory(mem.UnsafeData(store))
 
 	// Fetch the getsp function and reference it on the instance.
 	spFn := instance.GetExport(store, "getsp")

@@ -103,7 +103,7 @@ func run(filename string) error {
 		return err
 	}
 
-	instance.Memory = mem.Data()
+	instance.Memory = wasmexec.NewMemory(mem.Data())
 
 	// Fetch the getsp function and reference it on the instance.
 	instance.spFn, err = instance.Exports.GetFunction("getsp")
