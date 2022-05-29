@@ -293,11 +293,9 @@ func NewModuleGo(instance Instance) *ModuleGo {
 										},
 									}
 
-									mod.instance.Debug("_makeFuncWrapper(id=%v)", id)
-
 									mod.values[6].(*Object).properties["_pendingEvent"] = event
 									if err := mod.instance.Resume(); err != nil {
-										mod.instance.Error("_makeFuncWrapper: %v", err)
+										mod.instance.Error("_makeFuncWrapper: Resume: %v", err)
 										return nil
 									}
 
