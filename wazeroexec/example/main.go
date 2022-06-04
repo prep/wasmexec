@@ -94,8 +94,6 @@ func run(filename string) error {
 	}
 	defer module.Close(ctx)
 
-	fmt.Println("3")
-
 	// Fetch the memory export and set it on the instance, making the memory
 	// accessible by the imports.
 	mem := module.ExportedMemory("mem")
