@@ -10,7 +10,7 @@ import (
 )
 
 // Import the Go JavaScript functions.
-func Import(ctx context.Context, runtime wazero.Runtime, instance wasmexec.Instance) error {
+func Import(ctx context.Context, runtime wazero.Runtime, ns wazero.Namespace, instance wasmexec.Instance) (*wasmexec.ModuleGo, error) {
 	mod := wasmexec.NewModuleGo(instance)
 
 	funcs := map[string]any{
@@ -41,8 +41,12 @@ func Import(ctx context.Context, runtime wazero.Runtime, instance wasmexec.Insta
 		"debug":                         mod.Debug,
 	}
 
-	_, err := runtime.NewModuleBuilder("go").ExportFunctions(funcs).Instantiate(ctx)
-	return err
+	_, err := runtime.NewModuleBuilder("go").ExportFunctions(funcs).Instantiate(ctx, ns)
+	if err != nil {
+		return nil, err
+	}
+
+	return mod, nil
 }
 
 // Memory wraps a wazero Memory module and slaps on top of it the getter and

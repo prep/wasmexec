@@ -83,16 +83,18 @@ func run(filename string) error {
 	instance := &Instance{}
 
 	// Import the wasmexec functions.
-	if err = wazeroexec.Import(ctx, runtime, instance); err != nil {
+	if _, err = wazeroexec.Import(ctx, runtime, runtime, instance); err != nil {
 		return err
 	}
 
 	// Create an instance of the module.
-	module, err := runtime.InstantiateModuleFromCode(ctx, data)
+	module, err := runtime.InstantiateModuleFromBinary(ctx, data)
 	if err != nil {
 		return err
 	}
 	defer module.Close(ctx)
+
+	fmt.Println("3")
 
 	// Fetch the memory export and set it on the instance, making the memory
 	// accessible by the imports.
