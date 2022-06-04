@@ -26,6 +26,7 @@ type Instance struct {
 }
 
 func (instance *Instance) Debug(format string, params ...interface{}) {
+	// log.Printf("DEBUG: "+format+"\n", params...)
 }
 
 func (instance *Instance) Error(format string, params ...interface{}) {
@@ -65,6 +66,16 @@ func (instance *Instance) Write(fd int, b []byte) (n int, err error) {
 func (instance *Instance) Exit(code int) {
 }
 
+// HostCall is an optional method that allows the guest to use a fake waPC
+// interface package to send messages to this host.
+func (instance *Instance) HostCall(binding, namespace, operation string, payload []byte) ([]byte, error) {
+	if namespace == "sample" && operation == "hello" {
+		return []byte(fmt.Sprintf("Hello %s!", string(payload))), nil
+	}
+
+	return nil, fmt.Errorf("%s/%s: unsupported namespace + operation combination", namespace, operation)
+}
+
 func run(filename string) error {
 	// Read the Wasm file into memory.
 	data, err := ioutil.ReadFile(filename)
@@ -83,7 +94,8 @@ func run(filename string) error {
 	instance := &Instance{}
 
 	// Import the wasmexec functions.
-	if _, err = wazeroexec.Import(ctx, runtime, runtime, instance); err != nil {
+	gomod, err := wazeroexec.Import(ctx, runtime, runtime, instance)
+	if err != nil {
 		return err
 	}
 
@@ -122,7 +134,17 @@ func run(filename string) error {
 	}
 
 	_, err = runFn.Call(ctx, 0, 0)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Silently fail, because not all examples implement waPC.
+	result, err := gomod.Invoke(ctx, "hello", []byte("Host"))
+	if err == nil {
+		fmt.Printf("Message from guest: %s\n", string(result))
+	}
+
+	return nil
 }
 
 func main() {

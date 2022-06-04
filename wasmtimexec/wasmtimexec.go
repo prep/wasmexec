@@ -6,13 +6,10 @@ import (
 	"github.com/bytecodealliance/wasmtime-go"
 )
 
-var (
-	i32 = wasmtime.NewValType(wasmtime.KindI32)
-	i64 = wasmtime.NewValType(wasmtime.KindI64)
-)
+var i32 = wasmtime.NewValType(wasmtime.KindI32)
 
 // Import the Go JavaScript functions.
-func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.Instance) error {
+func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.Instance) (*wasmexec.ModuleGo, error) {
 	var err error
 	define := func(module, name string, item wasmtime.AsExtern) {
 		if err != nil {
@@ -249,5 +246,5 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		}),
 	)
 
-	return err
+	return mod, err
 }

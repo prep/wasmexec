@@ -7,7 +7,7 @@ import (
 )
 
 // Import the Go JavaScript functions.
-func Import(store *wasmer.Store, instance wasmexec.Instance) *wasmer.ImportObject {
+func Import(store *wasmer.Store, instance wasmexec.Instance) (*wasmer.ImportObject, *wasmexec.ModuleGo) {
 	mod := wasmexec.NewModuleGo(instance)
 
 	wasmExit := wasmer.NewFunction(
@@ -264,5 +264,5 @@ func Import(store *wasmer.Store, instance wasmexec.Instance) *wasmer.ImportObjec
 		"debug":                         debug,
 	})
 
-	return imports
+	return imports, mod
 }

@@ -1,11 +1,13 @@
 package wasmexec
 
 import (
+	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
 	"math"
 	"reflect"
+	"strconv"
 	"syscall"
 	"time"
 )
@@ -44,7 +46,12 @@ type String struct {
 
 // Function describes a function.
 type Function struct {
-	fn func(args []any) any
+	name string
+	fn   func(args []any) any
+}
+
+func (fn Function) Name() string {
+	return fn.name
 }
 
 // newFuncObject returns a new function.
@@ -64,10 +71,25 @@ func toInt(v any) (int, error) {
 	return 0, fmt.Errorf("%T: unable to convert to int", v)
 }
 
+// invokeContext keeps track of the response from the guest during an Invoke
+// call.
+type invokeContext struct {
+	guestResp []byte
+	guestErr  string
+}
+
+// hostCaller describes an instance that has implemented the waPC HostCall method.
+type hostCaller interface {
+	HostCall(string, string, string, []byte) ([]byte, error)
+}
+
 // ModuleGo implements the JavaScript imports that a Go program compiled with
 // GOOS=js expects.
 type ModuleGo struct {
-	instance  Instance
+	instance      Instance
+	waPC          hostCaller
+	invokeContext *invokeContext
+
 	idcounter uint32
 	ids       map[any]uint32
 	values    map[uint32]any
@@ -76,10 +98,12 @@ type ModuleGo struct {
 
 // NewModuleGo returns a new ModuleGo.
 func NewModuleGo(instance Instance) *ModuleGo {
-	var mod *ModuleGo
+	waPC, _ := instance.(hostCaller)
 
+	var mod *ModuleGo
 	mod = &ModuleGo{
 		instance:  instance,
+		waPC:      waPC,
 		idcounter: 10,
 		refcounts: make(map[uint32]int32),
 		ids: map[any]uint32{
@@ -91,7 +115,7 @@ func NewModuleGo(instance Instance) *ModuleGo {
 		},
 		values: map[uint32]any{
 			0: NaN,
-			1: 0,
+			1: float64(0),
 			2: nil,
 			3: true,
 			4: false,
@@ -100,6 +124,7 @@ func NewModuleGo(instance Instance) *ModuleGo {
 			5: &Object{
 				properties: Properties{
 					"Array": &Function{
+						name: "Array",
 						fn: func([]any) any {
 							return &Array{}
 						},
@@ -122,12 +147,14 @@ func NewModuleGo(instance Instance) *ModuleGo {
 					},
 
 					"Object": &Function{
+						name: "Object",
 						fn: func([]any) any {
 							return &Object{properties: make(Properties)}
 						},
 					},
 
 					"Uint8Array": &Function{
+						name: "Uint8Array",
 						fn: func(args []any) any {
 							if len(args) == 0 {
 								return []byte{}
@@ -266,6 +293,78 @@ func NewModuleGo(instance Instance) *ModuleGo {
 							"chdir":     newFuncObject(func([]any) any { return enosys }),
 						},
 					},
+
+					// waPC.
+					"wapc": &Object{
+						properties: Properties{
+							"__guest_response": &Function{
+								fn: func(args []any) any {
+									if len(args) != 1 {
+										return nil
+									}
+
+									if resp, ok := args[0].(*Uint8Array); ok {
+										mod.invokeContext.guestResp = resp.data
+									}
+
+									return nil
+								},
+							},
+							"__guest_error": &Function{
+								fn: func(args []any) any {
+									if len(args) != 1 {
+										return nil
+									}
+
+									if resp, ok := args[0].(*Uint8Array); ok {
+										mod.invokeContext.guestErr = string(resp.data)
+									}
+
+									return nil
+								},
+							},
+							"__host_call": &Function{
+								fn: func(args []any) any {
+									resp, err := func() ([]byte, error) {
+										if mod.waPC == nil {
+											return nil, errors.New("no waPC host support")
+										}
+
+										if len(args) != 4 {
+											return nil, fmt.Errorf("%d: unexpected length of arguments for __host_call", len(args))
+										}
+
+										binding, ok := args[0].(*Uint8Array)
+										if !ok {
+											return nil, fmt.Errorf("%T: unexpected type for binding parameter", args[0])
+										}
+
+										namespace, ok := args[1].(*Uint8Array)
+										if !ok {
+											return nil, fmt.Errorf("%T: unexpected type for namespace parameter", args[1])
+										}
+
+										operation, ok := args[2].(*Uint8Array)
+										if !ok {
+											return nil, fmt.Errorf("%T: unexpected type for operation parameter", args[2])
+										}
+
+										payload, ok := args[3].(*Uint8Array)
+										if !ok {
+											return nil, fmt.Errorf("%T: unexpected type for payload parameter", args[3])
+										}
+
+										return mod.waPC.HostCall(string(binding.data), string(namespace.data), string(operation.data), payload.data)
+									}()
+									if err != nil {
+										return []any{nil, err.Error()}
+									}
+
+									return []any{&Uint8Array{data: resp}, nil}
+								},
+							},
+						},
+					},
 				},
 			},
 
@@ -287,8 +386,9 @@ func NewModuleGo(instance Instance) *ModuleGo {
 								fn: func(args []any) any {
 									event := &Object{
 										properties: Properties{
-											"id":   id,
-											"this": mod.values[6].(*Object),
+											"id": id,
+											// "this": mod.values[6].(*Object),
+											"this": nil,
 											"args": &Array{elements: args},
 										},
 									}
@@ -310,6 +410,47 @@ func NewModuleGo(instance Instance) *ModuleGo {
 	}
 
 	return mod
+}
+
+// Call a function created by js.FuncOf().
+func (mod *ModuleGo) Call(name string, args ...any) (any, error) {
+	obj, ok := mod.values[5].(*Object)
+	if !ok {
+		return nil, errors.New("global not an object")
+	}
+
+	prop, ok := obj.properties[name]
+	if !ok {
+		return nil, fmt.Errorf("%s: not found", name)
+	}
+
+	fn, ok := prop.(*Function)
+	if !ok {
+		return nil, fmt.Errorf("%s: not a function", name)
+	}
+
+	return fn.fn(args), nil
+}
+
+// Invoke calls operation with the specified payload and returns a []byte payload.
+func (mod *ModuleGo) Invoke(_ context.Context, operation string, payload []byte) ([]byte, error) {
+	mod.invokeContext = &invokeContext{}
+
+	result, err := mod.Call("__guest_call", operation, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	success, ok := result.(bool)
+	if !ok {
+		return nil, fmt.Errorf("%T: unexpected response type from __guest_call", result)
+	}
+
+	if success {
+		return mod.invokeContext.guestResp, nil
+	}
+
+	return nil, errors.New(mod.invokeContext.guestErr)
 }
 
 // ****************************************************************************
@@ -363,7 +504,14 @@ func (mod *ModuleGo) loadValue(addr int32) (any, error) {
 }
 
 func (mod *ModuleGo) storeValue(addr int32, v any) error {
-	mod.instance.Debug("   storeValue(addr=%v v=%v nil=%v)", addr, v, (v == nil))
+	mod.instance.Debug("   storeValue(addr=%v type=%T v=%v nil=%v)", addr, v, v, (v == nil))
+
+	switch vv := v.(type) {
+	case []byte:
+		mod.instance.Debug("   storeValue([]byte=%v)", string(vv))
+	case *Uint8Array:
+		mod.instance.Debug("   storeValue(Uint8Array=%v)", string(vv.data))
+	}
 
 	// Convert any integer to a float64, which is akin to a JSON number.
 	switch num := v.(type) {
@@ -412,12 +560,29 @@ func (mod *ModuleGo) storeValue(addr int32, v any) error {
 	// Check for specific values that don't require storing anything in the
 	// ids and values map.
 	switch v {
+	case float64(0):
+		return setNaN(1)
 	case nil:
 		return setNaN(2)
 	case true:
 		return setNaN(3)
 	case false:
 		return setNaN(4)
+	}
+
+	// Convert slices to the Array type.
+	if a, ok := v.([]any); ok {
+		v = &Array{elements: a}
+	}
+
+	// Convert strings to the String type.
+	if str, ok := v.(string); ok {
+		v = &String{payload: str}
+	}
+
+	// Convert []byte to the Uint8Array type.
+	if b, ok := v.([]byte); ok {
+		v = &Uint8Array{data: b}
 	}
 
 	// Create a unique signature of the value.
@@ -450,6 +615,7 @@ func (mod *ModuleGo) storeValue(addr int32, v any) error {
 
 	case *Function:
 		typeFlag = 4
+
 	default:
 		panic(fmt.Sprintf("%T: unknown value type", t))
 	}
@@ -636,7 +802,7 @@ func (mod *ModuleGo) wrap(name string, fn func() error) error {
 		return nil
 	}
 
-	if name != "" {
+	if name != "" && name != "runtime.wasmWrite" {
 		mod.instance.Debug(name)
 	}
 
@@ -1153,10 +1319,13 @@ func (mod *ModuleGo) ValueLength(sp int32) {
 			return err
 		}
 
-		// TODO: Supposedly this should only be called on objects?
 		switch val := v.(type) {
 		case *Array:
 			return mod.instance.SetInt64(sp+16, int64(len(val.elements)))
+		case *Uint8Array:
+			return mod.instance.SetInt64(sp+16, int64(len(val.data)))
+		case *String:
+			return mod.instance.SetInt64(sp+16, int64(len(val.payload)))
 		default:
 			return fmt.Errorf("%T: unknown type for valueLength", v)
 		}
@@ -1165,11 +1334,14 @@ func (mod *ModuleGo) ValueLength(sp int32) {
 
 // ValuePrepareString converts a value to a string and stores it.
 //
-// This method is called from syscall/js.Value.String().
+// This method is called from syscall/js.Value.String() for String, Boolean
+// and Number types.
 func (mod *ModuleGo) ValuePrepareString(sp int32) {
 	sp >>= 0
 
 	_ = mod.wrap("syscall/js.valuePrepareString", func() error {
+		mod.instance.Debug("   valuePrepareString: sp=%v", sp)
+
 		v, err := mod.loadValue(sp + 8)
 		if err != nil {
 			return err
@@ -1177,8 +1349,15 @@ func (mod *ModuleGo) ValuePrepareString(sp int32) {
 
 		var s *String
 		switch vv := v.(type) {
-		case *Uint8Array:
-			s = &String{payload: string(vv.data)}
+		// Boolean.
+		case bool:
+			s = &String{payload: fmt.Sprintf("%t", vv)}
+		// Number.
+		case float64:
+			s = &String{payload: strconv.FormatFloat(vv, 'f', -1, 64)}
+		// String.
+		case *String:
+			s = vv
 		default:
 			return fmt.Errorf("%T: unable to convert type to string", v)
 		}
@@ -1225,21 +1404,39 @@ func (mod *ModuleGo) ValueInstanceOf(sp int32) {
 	sp >>= 0
 
 	_ = mod.wrap("syscall/js.valueInstanceOf", func() error {
-		/*
-			v, err := mod.loadValue(sp + 8)
-			if err != nil {
-				return err
+		v, err := mod.loadValue(sp + 8)
+		if err != nil {
+			return err
+		}
+
+		t, err := mod.loadValue(sp + 16)
+		if err != nil {
+			return err
+		}
+
+		mod.instance.Debug("   is %#v an instance of %#v?", v, t)
+
+		lookup, ok := t.(interface{ Name() string })
+		if !ok {
+			return mod.instance.SetUInt8(sp+24, 0)
+		}
+
+		name := lookup.Name()
+		switch v.(type) {
+		case *Array:
+			if name == "Array" {
+				return mod.instance.SetUInt8(sp+24, 1)
 			}
-
-			t, err := mod.loadValue(sp + 16)
-			if err != nil {
-				return err
+		case *Object:
+			if name == "Object" {
+				return mod.instance.SetUInt8(sp+24, 1)
 			}
+		case *Uint8Array:
+			if name == "Uint8Array" {
+				return mod.instance.SetUInt8(sp+24, 1)
+			}
+		}
 
-			mod.instance.Debug("   is %#v an instance of %#v?", src, dst)
-		*/
-
-		// TODO: This is not an implementation. Setting "0" means this method will always return false.
 		return mod.instance.SetUInt8(sp+24, 0)
 	})
 }
