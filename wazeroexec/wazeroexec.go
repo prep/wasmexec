@@ -60,8 +60,8 @@ func NewMemory(mem api.Memory) *Memory {
 	return &Memory{Memory: mem}
 }
 
-func (mem *Memory) GetUInt32(offset int32) (uint32, error) {
-	val, ok := mem.ReadUint32Le(context.Background(), uint32(offset))
+func (mem *Memory) GetUInt32(offset uint32) (uint32, error) {
+	val, ok := mem.ReadUint32Le(context.Background(), offset)
 	if !ok {
 		return 0, wasmexec.ErrFault
 	}
@@ -69,8 +69,8 @@ func (mem *Memory) GetUInt32(offset int32) (uint32, error) {
 	return val, nil
 }
 
-func (mem *Memory) GetInt64(offset int32) (int64, error) {
-	val, ok := mem.ReadUint64Le(context.Background(), uint32(offset))
+func (mem *Memory) GetInt64(offset uint32) (int64, error) {
+	val, ok := mem.ReadUint64Le(context.Background(), offset)
 	if !ok {
 		return 0, wasmexec.ErrFault
 	}
@@ -78,8 +78,8 @@ func (mem *Memory) GetInt64(offset int32) (int64, error) {
 	return int64(val), nil
 }
 
-func (mem *Memory) GetFloat64(offset int32) (float64, error) {
-	val, ok := mem.ReadFloat64Le(context.Background(), uint32(offset))
+func (mem *Memory) GetFloat64(offset uint32) (float64, error) {
+	val, ok := mem.ReadFloat64Le(context.Background(), offset)
 	if !ok {
 		return 0, wasmexec.ErrFault
 	}
@@ -87,8 +87,8 @@ func (mem *Memory) GetFloat64(offset int32) (float64, error) {
 	return val, nil
 }
 
-func (mem *Memory) Mem(offset, length int32) ([]byte, error) {
-	data, ok := mem.Read(context.Background(), uint32(offset), uint32(length))
+func (mem *Memory) Mem(offset, length uint32) ([]byte, error) {
+	data, ok := mem.Read(context.Background(), offset, length)
 	if !ok {
 		return nil, wasmexec.ErrFault
 	}
@@ -96,8 +96,8 @@ func (mem *Memory) Mem(offset, length int32) ([]byte, error) {
 	return data, nil
 }
 
-func (mem *Memory) SetUInt8(offset int32, val uint8) error {
-	ok := mem.WriteByte(context.Background(), uint32(offset), val)
+func (mem *Memory) SetUInt8(offset uint32, val uint8) error {
+	ok := mem.WriteByte(context.Background(), offset, val)
 	if !ok {
 		return wasmexec.ErrFault
 	}
@@ -105,8 +105,8 @@ func (mem *Memory) SetUInt8(offset int32, val uint8) error {
 	return nil
 }
 
-func (mem *Memory) SetUInt32(offset int32, val uint32) error {
-	ok := mem.WriteUint32Le(context.Background(), uint32(offset), val)
+func (mem *Memory) SetUInt32(offset, val uint32) error {
+	ok := mem.WriteUint32Le(context.Background(), offset, val)
 	if !ok {
 		return wasmexec.ErrFault
 	}
@@ -114,8 +114,8 @@ func (mem *Memory) SetUInt32(offset int32, val uint32) error {
 	return nil
 }
 
-func (mem *Memory) SetInt64(offset int32, val int64) error {
-	ok := mem.WriteUint64Le(context.Background(), uint32(offset), uint64(val))
+func (mem *Memory) SetInt64(offset uint32, val int64) error {
+	ok := mem.WriteUint64Le(context.Background(), offset, uint64(val))
 	if !ok {
 		return wasmexec.ErrFault
 	}
@@ -123,8 +123,8 @@ func (mem *Memory) SetInt64(offset int32, val int64) error {
 	return nil
 }
 
-func (mem *Memory) SetFloat64(offset int32, val float64) error {
-	ok := mem.WriteFloat64Le(context.Background(), uint32(offset), val)
+func (mem *Memory) SetFloat64(offset uint32, val float64) error {
+	ok := mem.WriteFloat64Le(context.Background(), offset, val)
 	if !ok {
 		return wasmexec.ErrFault
 	}

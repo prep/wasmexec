@@ -9,7 +9,7 @@ type Instance interface {
 	Error(format string, params ...interface{})
 
 	// Get the SP value.
-	GetSP() (int32, error)
+	GetSP() (uint32, error)
 
 	// Resume the execution of Go code until it needs to wait for an event.
 	Resume() error

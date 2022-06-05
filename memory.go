@@ -10,14 +10,14 @@ import (
 var ErrFault = errors.New("bad address")
 
 type Memory interface {
-	Mem(offset, length int32) ([]byte, error)
-	GetUInt32(offset int32) (uint32, error)
-	GetInt64(offset int32) (int64, error)
-	GetFloat64(offset int32) (float64, error)
-	SetUInt8(offset int32, val uint8) error
-	SetUInt32(offset int32, val uint32) error
-	SetInt64(offset int32, val int64) error
-	SetFloat64(offset int32, val float64) error
+	Mem(offset, length uint32) ([]byte, error)
+	GetUInt32(offset uint32) (uint32, error)
+	GetInt64(offset uint32) (int64, error)
+	GetFloat64(offset uint32) (float64, error)
+	SetUInt8(offset uint32, val uint8) error
+	SetUInt32(offset, val uint32) error
+	SetInt64(offset uint32, val int64) error
+	SetFloat64(offset uint32, val float64) error
 }
 
 type memory []byte
@@ -28,7 +28,7 @@ func NewMemory(mem []byte) Memory {
 }
 
 // Mem returns part of memory block.
-func (mem memory) Mem(offset, length int32) ([]byte, error) {
+func (mem memory) Mem(offset, length uint32) ([]byte, error) {
 	if int(offset+length) >= len(mem) {
 		return nil, ErrFault
 	}
@@ -37,7 +37,7 @@ func (mem memory) Mem(offset, length int32) ([]byte, error) {
 }
 
 // GetUInt32 returns an uint32 value.
-func (mem memory) GetUInt32(offset int32) (uint32, error) {
+func (mem memory) GetUInt32(offset uint32) (uint32, error) {
 	if int(offset+4) >= len(mem) {
 		return 0, ErrFault
 	}
@@ -46,7 +46,7 @@ func (mem memory) GetUInt32(offset int32) (uint32, error) {
 }
 
 // GetInt64 returns an int64 value.
-func (mem memory) GetInt64(offset int32) (int64, error) {
+func (mem memory) GetInt64(offset uint32) (int64, error) {
 	if int(offset+8) >= len(mem) {
 		return 0, ErrFault
 	}
@@ -55,7 +55,7 @@ func (mem memory) GetInt64(offset int32) (int64, error) {
 }
 
 // GetFloat64 returns a float64 value.
-func (mem memory) GetFloat64(offset int32) (float64, error) {
+func (mem memory) GetFloat64(offset uint32) (float64, error) {
 	if int(offset+8) >= len(mem) {
 		return 0, ErrFault
 	}
@@ -64,7 +64,7 @@ func (mem memory) GetFloat64(offset int32) (float64, error) {
 }
 
 // SetUInt8 sets an uint8 value.
-func (mem memory) SetUInt8(offset int32, val uint8) error {
+func (mem memory) SetUInt8(offset uint32, val uint8) error {
 	if int(offset+1) >= len(mem) {
 		return ErrFault
 	}
@@ -73,13 +73,8 @@ func (mem memory) SetUInt8(offset int32, val uint8) error {
 	return nil
 }
 
-// SetInt32 sets an int32 value.
-func (mem memory) SetInt32(offset, val int32) error {
-	return mem.SetUInt32(offset, uint32(val))
-}
-
 // SetUInt32 sets an uint32 value.
-func (mem memory) SetUInt32(offset int32, val uint32) error {
+func (mem memory) SetUInt32(offset, val uint32) error {
 	if int(offset+4) >= len(mem) {
 		return ErrFault
 	}
@@ -89,7 +84,7 @@ func (mem memory) SetUInt32(offset int32, val uint32) error {
 }
 
 // SetInt64 sets an int64 value.
-func (mem memory) SetInt64(offset int32, val int64) error {
+func (mem memory) SetInt64(offset uint32, val int64) error {
 	if int(offset+8) >= len(mem) {
 		return ErrFault
 	}
@@ -99,7 +94,7 @@ func (mem memory) SetInt64(offset int32, val int64) error {
 }
 
 // SetFloat64 sets a float64 value.
-func (mem memory) SetFloat64(offset int32, val float64) error {
+func (mem memory) SetFloat64(offset uint32, val float64) error {
 	if int(offset+8) >= len(mem) {
 		return ErrFault
 	}

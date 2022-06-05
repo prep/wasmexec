@@ -33,7 +33,7 @@ func (instance *Instance) Error(format string, params ...interface{}) {
 	log.Printf("ERROR: "+format+"\n", params...)
 }
 
-func (instance *Instance) GetSP() (int32, error) {
+func (instance *Instance) GetSP() (uint32, error) {
 	results, err := instance.spFn.Call(context.Background())
 	switch {
 	case err != nil:
@@ -42,7 +42,7 @@ func (instance *Instance) GetSP() (int32, error) {
 		return 0, errors.New("getsp: no sp value returned")
 	}
 
-	return int32(results[0]), nil
+	return uint32(results[0]), nil
 }
 
 func (instance *Instance) Resume() error {

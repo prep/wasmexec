@@ -31,7 +31,7 @@ func (instance *Instance) Error(format string, params ...interface{}) {
 	log.Printf("ERROR: "+format+"\n", params...)
 }
 
-func (instance *Instance) GetSP() (int32, error) {
+func (instance *Instance) GetSP() (uint32, error) {
 	val, err := instance.spFn()
 	if err != nil {
 		return 0, err
@@ -42,7 +42,7 @@ func (instance *Instance) GetSP() (int32, error) {
 		return 0, fmt.Errorf("getsp: %T: expected an int32 return value", sp)
 	}
 
-	return sp, nil
+	return uint32(sp), nil
 }
 
 func (instance *Instance) Resume() error {

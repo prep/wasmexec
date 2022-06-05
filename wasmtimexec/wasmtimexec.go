@@ -25,7 +25,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.WasmExit(args[0].I32())
+			mod.WasmExit(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -34,7 +34,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.WasmWrite(args[0].I32())
+			mod.WasmWrite(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -43,7 +43,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.ResetMemoryDataView(args[0].I32())
+			mod.ResetMemoryDataView(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -52,7 +52,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.Nanotime1(args[0].I32())
+			mod.Nanotime1(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -61,7 +61,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.Walltime(args[0].I32())
+			mod.Walltime(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -70,7 +70,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.ScheduleTimeoutEvent(args[0].I32())
+			mod.ScheduleTimeoutEvent(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -79,7 +79,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.ClearTimeoutEvent(args[0].I32())
+			mod.ClearTimeoutEvent(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -88,7 +88,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.GetRandomData(args[0].I32())
+			mod.GetRandomData(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -97,7 +97,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.FinalizeRef(args[0].I32())
+			mod.FinalizeRef(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -106,7 +106,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.StringVal(args[0].I32())
+			mod.StringVal(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -115,7 +115,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.ValueGet(args[0].I32())
+			mod.ValueGet(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -124,7 +124,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.ValueSet(args[0].I32())
+			mod.ValueSet(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -133,7 +133,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.ValueDelete(args[0].I32())
+			mod.ValueDelete(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -142,7 +142,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.ValueIndex(args[0].I32())
+			mod.ValueIndex(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -151,7 +151,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.ValueSetIndex(args[0].I32())
+			mod.ValueSetIndex(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -160,7 +160,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.ValueCall(args[0].I32())
+			mod.ValueCall(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -169,7 +169,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.ValueCall(args[0].I32())
+			mod.ValueCall(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -178,7 +178,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.ValueNew(args[0].I32())
+			mod.ValueNew(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -187,7 +187,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.ValueLength(args[0].I32())
+			mod.ValueLength(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -196,7 +196,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.ValuePrepareString(args[0].I32())
+			mod.ValuePrepareString(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -205,7 +205,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.ValueLoadString(args[0].I32())
+			mod.ValueLoadString(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -214,7 +214,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.ValueInstanceOf(args[0].I32())
+			mod.ValueInstanceOf(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -223,7 +223,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.CopyBytesToGo(args[0].I32())
+			mod.CopyBytesToGo(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -232,7 +232,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.CopyBytesToJS(args[0].I32())
+			mod.CopyBytesToJS(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)
@@ -241,7 +241,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		store,
 		wasmtime.NewFuncType([]*wasmtime.ValType{i32}, []*wasmtime.ValType{}),
 		func(caller *wasmtime.Caller, args []wasmtime.Val) ([]wasmtime.Val, *wasmtime.Trap) {
-			mod.Debug(args[0].I32())
+			mod.Debug(uint32(args[0].I32()))
 			return []wasmtime.Val{}, nil
 		}),
 	)

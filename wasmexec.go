@@ -465,24 +465,9 @@ func (mod *ModuleGo) getID() uint32 {
 	return id
 }
 
-// getInt32 returns an int32 value.
-func (mod *ModuleGo) getInt32(offset int32) (int32, error) {
-	val, err := mod.instance.GetUInt32(offset)
-	if err != nil {
-		return 0, err
-	}
-
-	return int32(val), nil
-}
-
-// setInt32 sets an int32 value.
-func (mod *ModuleGo) setInt32(offset, val int32) error {
-	return mod.instance.SetUInt32(offset, uint32(val))
-}
-
 // loadValue loads either a number from the specified address, or it loads an
 // object ID from the address and fetches that value from the stored values.
-func (mod *ModuleGo) loadValue(addr int32) (any, error) {
+func (mod *ModuleGo) loadValue(addr uint32) (any, error) {
 	f, err := mod.instance.GetFloat64(addr)
 	switch {
 	case err != nil:
@@ -503,7 +488,7 @@ func (mod *ModuleGo) loadValue(addr int32) (any, error) {
 	return mod.values[id], nil
 }
 
-func (mod *ModuleGo) storeValue(addr int32, v any) error {
+func (mod *ModuleGo) storeValue(addr uint32, v any) error {
 	mod.instance.Debug("   storeValue(addr=%v type=%T v=%v nil=%v)", addr, v, v, (v == nil))
 
 	switch vv := v.(type) {
@@ -632,8 +617,8 @@ func (mod *ModuleGo) storeValue(addr int32, v any) error {
 }
 
 // loadSlice returns a byte slice that is referenced by the specified address.
-func (mod *ModuleGo) loadSlice(addr int32) ([]byte, error) {
-	a, err := mod.instance.GetInt64(addr)
+func (mod *ModuleGo) loadSlice(addr uint32) ([]byte, error) {
+	offset, err := mod.instance.GetInt64(addr)
 	if err != nil {
 		return nil, err
 	}
@@ -643,14 +628,14 @@ func (mod *ModuleGo) loadSlice(addr int32) ([]byte, error) {
 		return nil, err
 	}
 
-	mod.instance.Debug("   loadSlice(array=%v length=%v)", a, length)
+	mod.instance.Debug("   loadSlice(offset=%v length=%v)", offset, length)
 
-	return mod.instance.Mem(int32(a), int32(length))
+	return mod.instance.Mem(uint32(offset), uint32(length))
 }
 
 // loadSliceOfValues returns a slice of values that is referenced by the
 // specified address.
-func (mod *ModuleGo) loadSliceOfValues(addr int32) ([]any, error) {
+func (mod *ModuleGo) loadSliceOfValues(addr uint32) ([]any, error) {
 	offset, err := mod.instance.GetInt64(addr)
 	if err != nil {
 		return nil, err
@@ -663,7 +648,7 @@ func (mod *ModuleGo) loadSliceOfValues(addr int32) ([]any, error) {
 
 	a := make([]any, length)
 	for i := int64(0); i < length; i++ {
-		a[i], err = mod.loadValue(int32(offset + (i * 8)))
+		a[i], err = mod.loadValue(uint32(offset + (i * 8)))
 		if err != nil {
 			return nil, err
 		}
@@ -673,7 +658,7 @@ func (mod *ModuleGo) loadSliceOfValues(addr int32) ([]any, error) {
 }
 
 // loadString returns a string that is referenced by the specified address.
-func (mod *ModuleGo) loadString(addr int32) (string, error) {
+func (mod *ModuleGo) loadString(addr uint32) (string, error) {
 	d, err := mod.loadSlice(addr)
 	if err != nil {
 		return "", err
@@ -823,9 +808,7 @@ func (mod *ModuleGo) wrap(name string, fn func() error) error {
 // WasmExit is called whenever the WASM program exits.
 //
 // This method is called from the runtime package.
-func (mod *ModuleGo) WasmExit(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) WasmExit(sp uint32) {
 	_ = mod.wrap("runtime.wasmExit", func() error {
 		v, err := mod.instance.GetUInt32(sp + 8)
 		if err != nil {
@@ -840,9 +823,7 @@ func (mod *ModuleGo) WasmExit(sp int32) {
 // WasmWrite writes data to a file descriptor.
 //
 // This method is called from the runtime package.
-func (mod *ModuleGo) WasmWrite(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) WasmWrite(sp uint32) {
 	_ = mod.wrap("runtime.wasmWrite", func() error {
 		fd, err := mod.instance.GetInt64(sp + 8)
 		if err != nil {
@@ -854,12 +835,12 @@ func (mod *ModuleGo) WasmWrite(sp int32) {
 			return err
 		}
 
-		n, err := mod.getInt32(sp + 24)
+		n, err := mod.instance.GetUInt32(sp + 24)
 		if err != nil {
 			return err
 		}
 
-		mem, err := mod.instance.Mem(int32(p), n)
+		mem, err := mod.instance.Mem(uint32(p), n)
 		if err != nil {
 			return err
 		}
@@ -873,18 +854,14 @@ func (mod *ModuleGo) WasmWrite(sp int32) {
 // has been used.
 //
 // This method is called from the runtime package.
-func (mod *ModuleGo) ResetMemoryDataView(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) ResetMemoryDataView(sp uint32) {
 	_ = mod.wrap("runtime.resetMemoryDataView", nil)
 }
 
 // Nanotime1 returns the current time in nanoseconds.
 //
 // This method is called from the runtime package.
-func (mod *ModuleGo) Nanotime1(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) Nanotime1(sp uint32) {
 	_ = mod.wrap("runtime.nanotime1", func() error {
 		return mod.instance.SetInt64(sp+8, time.Now().UnixNano())
 	})
@@ -893,9 +870,7 @@ func (mod *ModuleGo) Nanotime1(sp int32) {
 // Walltime returns the current seconds and nanoseconds.
 //
 // This method is called from the runtime package.
-func (mod *ModuleGo) Walltime(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) Walltime(sp uint32) {
 	_ = mod.wrap("runtime.walltime", func() error {
 		msec := time.Now().UnixNano() / int64(time.Millisecond)
 
@@ -903,7 +878,7 @@ func (mod *ModuleGo) Walltime(sp int32) {
 			return err
 		}
 
-		return mod.setInt32(sp+16, int32(msec%1000)*1000000)
+		return mod.instance.SetUInt32(sp+16, uint32(msec%1000)*1000000)
 	})
 }
 
@@ -911,27 +886,21 @@ func (mod *ModuleGo) Walltime(sp int32) {
 // a certain amount of milliseconds.
 //
 // This method is called from the runtime package.
-func (mod *ModuleGo) ScheduleTimeoutEvent(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) ScheduleTimeoutEvent(sp uint32) {
 	_ = mod.wrap("runtime.scheduleTimeoutEvent", nil)
 }
 
 // ClearTimeoutEvent clears a timeout event scheduled by ScheduleTimeoutEvent.
 //
 // This method is called from the runtime package.
-func (mod *ModuleGo) ClearTimeoutEvent(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) ClearTimeoutEvent(sp uint32) {
 	_ = mod.wrap("runtime.clearTimeoutEvent", nil)
 }
 
 // GetRandomData returns random data.
 //
 // This method is called from the runtime package.
-func (mod *ModuleGo) GetRandomData(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) GetRandomData(sp uint32) {
 	_ = mod.wrap("runtime.getRandomData", func() error {
 		data, err := mod.loadSlice(sp + 8)
 		if err != nil {
@@ -946,9 +915,7 @@ func (mod *ModuleGo) GetRandomData(sp int32) {
 // FinalizeRef removes a value from memory.
 //
 // This method is called from various places in syscall/js.Value.
-func (mod *ModuleGo) FinalizeRef(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) FinalizeRef(sp uint32) {
 	_ = mod.wrap("syscall/js.finalizeRef", func() error {
 		id, err := mod.instance.GetUInt32(sp + 8)
 		if err != nil {
@@ -984,9 +951,7 @@ func (mod *ModuleGo) FinalizeRef(sp int32) {
 // StringVal stores a value as a string.
 //
 // This method is called from syscall/js.ValueOf().
-func (mod *ModuleGo) StringVal(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) StringVal(sp uint32) {
 	_ = mod.wrap("syscall/js.stringVal", func() error {
 		v, err := mod.loadString(sp + 8)
 		if err != nil {
@@ -1000,9 +965,7 @@ func (mod *ModuleGo) StringVal(sp int32) {
 // ValueGet returns the JavaScript property of an object.
 //
 // This method is called from syscall/js.Value.Get().
-func (mod *ModuleGo) ValueGet(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) ValueGet(sp uint32) {
 	_ = mod.wrap("syscall/js.valueGet", func() error {
 		// Fetch the object.
 		v, err := mod.loadValue(sp + 8)
@@ -1027,8 +990,6 @@ func (mod *ModuleGo) ValueGet(sp int32) {
 			return err
 		}
 
-		resultSP >>= 0
-
 		// Store the results.
 		return mod.storeValue(resultSP+32, result)
 	})
@@ -1037,9 +998,7 @@ func (mod *ModuleGo) ValueGet(sp int32) {
 // ValueSet sets a value on a property on an object.
 //
 // This method is called from syscall/js.Value.Set().
-func (mod *ModuleGo) ValueSet(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) ValueSet(sp uint32) {
 	_ = mod.wrap("syscall/js.valueSet", func() error {
 		v, err := mod.loadValue(sp + 8)
 		if err != nil {
@@ -1063,9 +1022,7 @@ func (mod *ModuleGo) ValueSet(sp int32) {
 // ValueDelete deletes a property on an object.
 //
 // This method is called from syscall/js.Value.Delete().
-func (mod *ModuleGo) ValueDelete(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) ValueDelete(sp uint32) {
 	_ = mod.wrap("syscall/js.valueDelete", func() error {
 		// Fetch the object.
 		v, err := mod.loadValue(sp + 8)
@@ -1087,9 +1044,7 @@ func (mod *ModuleGo) ValueDelete(sp int32) {
 // ValueIndex returns a value at a particular index in an array.
 //
 // This method is called from syscall/js.Value.Index().
-func (mod *ModuleGo) ValueIndex(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) ValueIndex(sp uint32) {
 	_ = mod.wrap("syscall/js.valueIndex", func() error {
 		// Fetch the object.
 		obj, err := mod.loadValue(sp + 8)
@@ -1117,9 +1072,7 @@ func (mod *ModuleGo) ValueIndex(sp int32) {
 // ValueSetIndex sets the value at a particular index of an array.
 //
 // This method is called from syscall/js.Value.SetIndex().
-func (mod *ModuleGo) ValueSetIndex(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) ValueSetIndex(sp uint32) {
 	_ = mod.wrap("syscall/js.valueSetIndex", func() error {
 		// Fetch the object.
 		obj, err := mod.loadValue(sp + 8)
@@ -1147,18 +1100,14 @@ func (mod *ModuleGo) ValueSetIndex(sp int32) {
 // ValueCall calls the method on an object with the give arguments.
 //
 // This method is called from syscall/js.Value.Call().
-func (mod *ModuleGo) ValueCall(sp int32) {
-	sp >>= 0
-
-	var resultSP int32
+func (mod *ModuleGo) ValueCall(sp uint32) {
+	var resultSP uint32
 	err := mod.wrap("syscall/js.valueCall", func() error {
 		var err error
 		resultSP, err = mod.instance.GetSP()
 		if err != nil {
 			return err
 		}
-
-		resultSP >>= 0
 
 		// Fetch the object.
 		v, err := mod.loadValue(sp + 8)
@@ -1205,18 +1154,14 @@ func (mod *ModuleGo) ValueCall(sp int32) {
 // ValueInvoke calls the value v with the specified arguments.
 //
 // This method is called from syscall/js.Value.Invoke().
-func (mod *ModuleGo) ValueInvoke(sp int32) {
-	sp >>= 0
-
-	var resultSP int32
+func (mod *ModuleGo) ValueInvoke(sp uint32) {
+	var resultSP uint32
 	err := mod.wrap("syscall/js.valueInvoke", func() error {
 		var err error
 		resultSP, err = mod.instance.GetSP()
 		if err != nil {
 			return err
 		}
-
-		resultSP >>= 0
 
 		// Fetch the function.
 		v, err := mod.loadValue(sp + 8)
@@ -1258,18 +1203,14 @@ func (mod *ModuleGo) ValueInvoke(sp int32) {
 // to JavaScript's "new" operator.
 //
 // This method is called from syscall/js.Value.New().
-func (mod *ModuleGo) ValueNew(sp int32) {
-	sp >>= 0
-
-	var resultSP int32
+func (mod *ModuleGo) ValueNew(sp uint32) {
+	var resultSP uint32
 	err := mod.wrap("syscall/js.valueNew", func() error {
 		var err error
 		resultSP, err = mod.instance.GetSP()
 		if err != nil {
 			return err
 		}
-
-		resultSP >>= 0
 
 		// Fetch the constructor function.
 		v, err := mod.loadValue(sp + 8)
@@ -1310,9 +1251,7 @@ func (mod *ModuleGo) ValueNew(sp int32) {
 // ValueLength returns the JavaScript property of "length" of v.
 //
 // This method is called from syscall/js.Value.Length().
-func (mod *ModuleGo) ValueLength(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) ValueLength(sp uint32) {
 	_ = mod.wrap("syscall/js.valueLength", func() error {
 		v, err := mod.loadValue(sp + 8)
 		if err != nil {
@@ -1336,9 +1275,7 @@ func (mod *ModuleGo) ValueLength(sp int32) {
 //
 // This method is called from syscall/js.Value.String() for String, Boolean
 // and Number types.
-func (mod *ModuleGo) ValuePrepareString(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) ValuePrepareString(sp uint32) {
 	_ = mod.wrap("syscall/js.valuePrepareString", func() error {
 		mod.instance.Debug("   valuePrepareString: sp=%v", sp)
 
@@ -1373,9 +1310,7 @@ func (mod *ModuleGo) ValuePrepareString(sp int32) {
 // ValueLoadString loads a string into memory.
 //
 // This method is called from syscall/js.Value.String().
-func (mod *ModuleGo) ValueLoadString(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) ValueLoadString(sp uint32) {
 	_ = mod.wrap("syscall/js.valueLoadString", func() error {
 		v, err := mod.loadValue(sp + 8)
 		if err != nil {
@@ -1400,9 +1335,7 @@ func (mod *ModuleGo) ValueLoadString(sp int32) {
 // ValueInstanceOf returns true when v is an instance of type t.
 //
 // This method is called from syscall/js.Value.InstanceOf().
-func (mod *ModuleGo) ValueInstanceOf(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) ValueInstanceOf(sp uint32) {
 	_ = mod.wrap("syscall/js.valueInstanceOf", func() error {
 		v, err := mod.loadValue(sp + 8)
 		if err != nil {
@@ -1442,9 +1375,7 @@ func (mod *ModuleGo) ValueInstanceOf(sp int32) {
 }
 
 // CopyBytesToGo copies bytes from JavaScript to Go.
-func (mod *ModuleGo) CopyBytesToGo(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) CopyBytesToGo(sp uint32) {
 	_ = mod.wrap("syscall/js.copyBytesToGo", func() error {
 		dst, err := mod.loadSlice(sp + 8)
 		if err != nil {
@@ -1475,9 +1406,7 @@ func (mod *ModuleGo) CopyBytesToGo(sp int32) {
 }
 
 // CopyBytesToJS copies bytes from Go to JavaScript.
-func (mod *ModuleGo) CopyBytesToJS(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) CopyBytesToJS(sp uint32) {
 	_ = mod.wrap("syscall/js.copyBytesToJS", func() error {
 		v, err := mod.loadValue(sp + 8)
 		if err != nil {
@@ -1508,8 +1437,6 @@ func (mod *ModuleGo) CopyBytesToJS(sp int32) {
 }
 
 // Debug prints some debugging information ... I guess?
-func (mod *ModuleGo) Debug(sp int32) {
-	sp >>= 0
-
+func (mod *ModuleGo) Debug(sp uint32) {
 	_ = mod.wrap("debug", nil)
 }
