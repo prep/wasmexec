@@ -1,41 +1,41 @@
 package wasmexec
 
-// Function describes the constructor of an Object.
-type Function struct {
+// jsFunction describes the constructor of an jsObject.
+type jsFunction struct {
 	name string
 	fn   func(args []any) any
 }
 
+// newjsFunction returns a new function.
+func newjsFunction(fn func(args []any) any) *jsFunction {
+	return &jsFunction{fn: fn}
+}
+
 // Name returns the name of the constructor type.
-func (fn Function) Name() string {
+func (fn jsFunction) Name() string {
 	return fn.name
 }
 
-// newFuncObject returns a new function.
-func newFuncObject(fn func(args []any) any) *Function {
-	return &Function{fn: fn}
-}
-
-// Properties describe the properties on an object. This can either be a
+// jsProperties describe the properties on an object. This can either be a
 // function or a value.
-type Properties map[string]any
+type jsProperties map[string]any
 
-// Object describes a JSON object.
-type Object struct {
-	properties Properties
+// jsObject describes a JSON object.
+type jsObject struct {
+	properties jsProperties
 }
 
-// Array describes an array of elements.
-type Array struct {
+// jsArray describes an array of elements.
+type jsArray struct {
 	elements []any
 }
 
-// Uint8Array describes a byte slice.
-type Uint8Array struct {
+// jsUint8Array describes a byte slice.
+type jsUint8Array struct {
 	data []byte
 }
 
-// String represents a stored string.
-type String struct {
+// jsString represents a stored string.
+type jsString struct {
 	data string
 }

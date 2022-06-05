@@ -98,21 +98,20 @@ func New(instance Instance) *Module {
 			4: false,
 
 			// global.
-			5: &Object{
-				properties: Properties{
-					"Array": &Function{
+			5: &jsObject{
+				properties: jsProperties{
+					"Array": &jsFunction{
 						name: "Array",
 						fn: func([]any) any {
-							return &Array{}
+							return &jsArray{}
 						},
 					},
 
-					"Date": &Function{
-						name: "Date",
+					"Date": &jsFunction{
 						fn: func([]any) any {
-							return &Object{
-								properties: Properties{
-									"getTimezoneOffset": &Function{
+							return &jsObject{
+								properties: jsProperties{
+									"getTimezoneOffset": &jsFunction{
 										fn: func(args []any) any {
 											t := time.Now()
 											_, offset := t.Zone()
@@ -124,14 +123,14 @@ func New(instance Instance) *Module {
 						},
 					},
 
-					"Object": &Function{
+					"Object": &jsFunction{
 						name: "Object",
 						fn: func([]any) any {
-							return &Object{properties: make(Properties)}
+							return &jsObject{properties: make(jsProperties)}
 						},
 					},
 
-					"Uint8Array": &Function{
+					"Uint8Array": &jsFunction{
 						name: "Uint8Array",
 						fn: func(args []any) any {
 							if len(args) == 0 {
@@ -143,24 +142,24 @@ func New(instance Instance) *Module {
 								return []byte{}
 							}
 
-							return &Uint8Array{
+							return &jsUint8Array{
 								data: make([]byte, uint32(length)),
 							}
 						},
 					},
 
-					"crypto": &Object{
-						properties: Properties{
-							"getRandomValues": &Function{
+					"crypto": &jsObject{
+						properties: jsProperties{
+							"getRandomValues": &jsFunction{
 								fn: func(args []any) any {
 									if len(args) != 1 {
 										mod.error("crypto.getRandomValues: %d: invalid number of arguments", len(args))
 										return 0
 									}
 
-									a, ok := args[0].(*Uint8Array)
+									a, ok := args[0].(*jsUint8Array)
 									if !ok {
-										mod.error("crypto.getRandomValues: %T: not type Uint8Array", args[0])
+										mod.error("crypto.getRandomValues: %T: not type jsUint8Array", args[0])
 										return 0
 									}
 
@@ -176,9 +175,9 @@ func New(instance Instance) *Module {
 						},
 					},
 
-					"fs": &Object{
-						properties: Properties{
-							"constants": Properties{
+					"fs": &jsObject{
+						properties: jsProperties{
+							"constants": jsProperties{
 								"O_WRONLY": syscall.O_WRONLY,
 								"O_RDWR":   syscall.O_RDWR,
 								"O_CREAT":  syscall.O_CREAT,
@@ -187,7 +186,7 @@ func New(instance Instance) *Module {
 								"O_EXCL":   syscall.O_EXCL,
 							},
 
-							"write": &Function{
+							"write": &jsFunction{
 								fn: func(args []any) any {
 									if len(args) != 6 {
 										mod.error("fs.write: %d: invalid number of arguments", len(args))
@@ -201,9 +200,9 @@ func New(instance Instance) *Module {
 									}
 									fd := int(val)
 
-									buf, ok := args[1].(*Uint8Array)
+									buf, ok := args[1].(*jsUint8Array)
 									if !ok {
-										mod.error("fs.write: %T: not type Uint8Array", args[1])
+										mod.error("fs.write: %T: not type jsUint8Array", args[1])
 										return nil
 									}
 
@@ -237,9 +236,9 @@ func New(instance Instance) *Module {
 										_ = position
 									*/
 
-									callback, ok := args[5].(*Function)
+									callback, ok := args[5].(*jsFunction)
 									if !ok {
-										mod.error("fs.write: %T: not type Function", args[5])
+										mod.error("fs.write: %T: not type jsFunction", args[5])
 										return nil
 									}
 
@@ -257,51 +256,51 @@ func New(instance Instance) *Module {
 						},
 					},
 
-					"process": &Object{
-						properties: Properties{
-							"getuid":    newFuncObject(func([]any) any { return -1 }),
-							"getgid":    newFuncObject(func([]any) any { return -1 }),
-							"geteuid":   newFuncObject(func([]any) any { return -1 }),
-							"getegid":   newFuncObject(func([]any) any { return -1 }),
-							"getgroups": newFuncObject(func([]any) any { return enosys }),
+					"process": &jsObject{
+						properties: jsProperties{
+							"getuid":    newjsFunction(func([]any) any { return -1 }),
+							"getgid":    newjsFunction(func([]any) any { return -1 }),
+							"geteuid":   newjsFunction(func([]any) any { return -1 }),
+							"getegid":   newjsFunction(func([]any) any { return -1 }),
+							"getgroups": newjsFunction(func([]any) any { return enosys }),
 							"pid":       -1,
 							"ppid":      -1,
-							"umask":     newFuncObject(func([]any) any { return enosys }),
-							"cwd":       newFuncObject(func([]any) any { return enosys }),
-							"chdir":     newFuncObject(func([]any) any { return enosys }),
+							"umask":     newjsFunction(func([]any) any { return enosys }),
+							"cwd":       newjsFunction(func([]any) any { return enosys }),
+							"chdir":     newjsFunction(func([]any) any { return enosys }),
 						},
 					},
 
 					// waPC.
-					"wapc": &Object{
-						properties: Properties{
-							"__guest_response": &Function{
+					"wapc": &jsObject{
+						properties: jsProperties{
+							"__guest_response": &jsFunction{
 								fn: func(args []any) any {
 									if len(args) != 1 {
 										return nil
 									}
 
-									if resp, ok := args[0].(*Uint8Array); ok {
+									if resp, ok := args[0].(*jsUint8Array); ok {
 										mod.invokeContext.guestResp = resp.data
 									}
 
 									return nil
 								},
 							},
-							"__guest_error": &Function{
+							"__guest_error": &jsFunction{
 								fn: func(args []any) any {
 									if len(args) != 1 {
 										return nil
 									}
 
-									if resp, ok := args[0].(*Uint8Array); ok {
+									if resp, ok := args[0].(*jsUint8Array); ok {
 										mod.invokeContext.guestErr = string(resp.data)
 									}
 
 									return nil
 								},
 							},
-							"__host_call": &Function{
+							"__host_call": &jsFunction{
 								fn: func(args []any) any {
 									resp, err := func() ([]byte, error) {
 										if mod.waPC == nil {
@@ -312,22 +311,22 @@ func New(instance Instance) *Module {
 											return nil, fmt.Errorf("%d: unexpected length of arguments for __host_call", len(args))
 										}
 
-										binding, ok := args[0].(*Uint8Array)
+										binding, ok := args[0].(*jsUint8Array)
 										if !ok {
 											return nil, fmt.Errorf("%T: unexpected type for binding parameter", args[0])
 										}
 
-										namespace, ok := args[1].(*Uint8Array)
+										namespace, ok := args[1].(*jsUint8Array)
 										if !ok {
 											return nil, fmt.Errorf("%T: unexpected type for namespace parameter", args[1])
 										}
 
-										operation, ok := args[2].(*Uint8Array)
+										operation, ok := args[2].(*jsUint8Array)
 										if !ok {
 											return nil, fmt.Errorf("%T: unexpected type for operation parameter", args[2])
 										}
 
-										payload, ok := args[3].(*Uint8Array)
+										payload, ok := args[3].(*jsUint8Array)
 										if !ok {
 											return nil, fmt.Errorf("%T: unexpected type for payload parameter", args[3])
 										}
@@ -338,7 +337,7 @@ func New(instance Instance) *Module {
 										return []any{nil, err.Error()}
 									}
 
-									return []any{&Uint8Array{data: resp}, nil}
+									return []any{&jsUint8Array{data: resp}, nil}
 								},
 							},
 						},
@@ -347,12 +346,12 @@ func New(instance Instance) *Module {
 			},
 
 			// jsGo.
-			6: &Object{
-				properties: Properties{
+			6: &jsObject{
+				properties: jsProperties{
 					"_pendingEvent": nil,
 
 					// This is called by js.FuncOf().
-					"_makeFuncWrapper": &Function{
+					"_makeFuncWrapper": &jsFunction{
 						fn: func(args []any) any {
 							if len(args) == 0 {
 								return nil
@@ -360,18 +359,18 @@ func New(instance Instance) *Module {
 
 							id := args[0]
 
-							return &Function{
+							return &jsFunction{
 								fn: func(args []any) any {
-									event := &Object{
-										properties: Properties{
+									event := &jsObject{
+										properties: jsProperties{
 											"id": id,
-											// "this": mod.values[6].(*Object),
+											// "this": mod.values[6].(*jsObject),
 											"this": nil,
-											"args": &Array{elements: args},
+											"args": &jsArray{elements: args},
 										},
 									}
 
-									mod.values[6].(*Object).properties["_pendingEvent"] = event
+									mod.values[6].(*jsObject).properties["_pendingEvent"] = event
 									if err := mod.instance.Resume(); err != nil {
 										mod.error("_makeFuncWrapper: Resume: %v", err)
 										return nil
@@ -392,7 +391,7 @@ func New(instance Instance) *Module {
 
 // Call a function created by js.FuncOf().
 func (mod *Module) Call(name string, args ...any) (any, error) {
-	obj, ok := mod.values[5].(*Object)
+	obj, ok := mod.values[5].(*jsObject)
 	if !ok {
 		return nil, errors.New("global not an object")
 	}
@@ -402,7 +401,7 @@ func (mod *Module) Call(name string, args ...any) (any, error) {
 		return nil, fmt.Errorf("%s: not found", name)
 	}
 
-	fn, ok := prop.(*Function)
+	fn, ok := prop.(*jsFunction)
 	if !ok {
 		return nil, fmt.Errorf("%s: not a function", name)
 	}
@@ -484,8 +483,8 @@ func (mod *Module) storeValue(addr uint32, v any) error {
 	switch vv := v.(type) {
 	case []byte:
 		mod.debug("   storeValue([]byte=%v)", string(vv))
-	case *Uint8Array:
-		mod.debug("   storeValue(Uint8Array=%v)", string(vv.data))
+	case *jsUint8Array:
+		mod.debug("   storeValue(jsUint8Array=%v)", string(vv.data))
 	}
 
 	// Convert any integer to a float64, which is akin to a JSON number.
@@ -545,19 +544,19 @@ func (mod *Module) storeValue(addr uint32, v any) error {
 		return setNaN(4)
 	}
 
-	// Convert slices to the Array type.
+	// Convert slices to the jsArray type.
 	if a, ok := v.([]any); ok {
-		v = &Array{elements: a}
+		v = &jsArray{elements: a}
 	}
 
-	// Convert strings to the String type.
+	// Convert strings to the jsString type.
 	if str, ok := v.(string); ok {
-		v = &String{data: str}
+		v = &jsString{data: str}
 	}
 
-	// Convert []byte to the Uint8Array type.
+	// Convert []byte to the jsUint8Array type.
 	if b, ok := v.([]byte); ok {
-		v = &Uint8Array{data: b}
+		v = &jsUint8Array{data: b}
 	}
 
 	// Create a unique signature of the value.
@@ -580,15 +579,15 @@ func (mod *Module) storeValue(addr uint32, v any) error {
 	// Determine if the value needs to be stored with a specific type flag.
 	var typeFlag uint32
 	switch t := v.(type) {
-	case *Object, *Array, *Uint8Array, Properties:
+	case *jsObject, *jsArray, *jsUint8Array, jsProperties:
 		if t != nil {
 			typeFlag = 1
 		}
 
-	case *String:
+	case *jsString:
 		typeFlag = 2
 
-	case *Function:
+	case *jsFunction:
 		typeFlag = 4
 
 	default:
@@ -671,7 +670,7 @@ func (mod *Module) reflectApply(v any, name string, args []any) (any, error) {
 func (mod *Module) reflectConstruct(v any, args []any) (any, error) {
 	mod.debug("   reflectConstruct(v=%v args=%v)", v, args)
 
-	if fn, ok := v.(*Function); ok {
+	if fn, ok := v.(*jsFunction); ok {
 		return fn.fn(args), nil
 	}
 
@@ -687,9 +686,9 @@ func (mod *Module) reflectGet(v, key any) (any, error) {
 
 	if name, ok := key.(string); ok {
 		switch vv := v.(type) {
-		case *Object:
+		case *jsObject:
 			return vv.properties[name], nil
-		case Properties:
+		case jsProperties:
 			return vv[name], nil
 		}
 	}
@@ -699,7 +698,7 @@ func (mod *Module) reflectGet(v, key any) (any, error) {
 		return nil, errors.New("key not an int64")
 	}
 
-	a, ok := v.(*Array)
+	a, ok := v.(*jsArray)
 	switch {
 	case !ok:
 		return nil, errors.New("value not a slice")
@@ -718,7 +717,7 @@ func (mod *Module) reflectSet(v, key, value any) error {
 	}
 
 	if name, ok := key.(string); ok {
-		v.(*Object).properties[name] = value
+		v.(*jsObject).properties[name] = value
 		return nil
 	}
 
@@ -727,7 +726,7 @@ func (mod *Module) reflectSet(v, key, value any) error {
 		return errors.New("key not an int64")
 	}
 
-	a, ok := v.(*Array)
+	a, ok := v.(*jsArray)
 	switch {
 	case !ok:
 		return errors.New("value not a slice")
@@ -747,7 +746,7 @@ func (mod *Module) reflectDeleteProperty(v, key any) error {
 	}
 
 	if name, ok := key.(string); ok {
-		delete(v.(*Object).properties, name)
+		delete(v.(*jsObject).properties, name)
 		return nil
 	}
 
@@ -756,7 +755,7 @@ func (mod *Module) reflectDeleteProperty(v, key any) error {
 		return errors.New("key not an int64")
 	}
 
-	a, ok := v.(*Array)
+	a, ok := v.(*jsArray)
 	switch {
 	case !ok:
 		return errors.New("value not a slice")
@@ -955,7 +954,7 @@ func (mod *Module) StringVal(sp uint32) {
 			return err
 		}
 
-		return mod.storeValue(sp+24, &String{v})
+		return mod.storeValue(sp+24, &jsString{v})
 	})
 }
 
@@ -1215,11 +1214,15 @@ func (mod *Module) ValueNew(sp uint32) {
 			return err
 		}
 
+		mod.debug("   v: %T: %v", v, v)
+
 		// Fetch the arguments to call the constructor with.
 		args, err := mod.loadSliceOfValues(sp + 16)
 		if err != nil {
 			return err
 		}
+
+		mod.debug("   args: %T: %v", args, args)
 
 		// Call the constructor function with the arguments.
 		result, err := mod.reflectConstruct(v, args)
@@ -1256,11 +1259,11 @@ func (mod *Module) ValueLength(sp uint32) {
 		}
 
 		switch val := v.(type) {
-		case *Array:
+		case *jsArray:
 			return mod.instance.SetInt64(sp+16, int64(len(val.elements)))
-		case *Uint8Array:
+		case *jsUint8Array:
 			return mod.instance.SetInt64(sp+16, int64(len(val.data)))
-		case *String:
+		case *jsString:
 			return mod.instance.SetInt64(sp+16, int64(len(val.data)))
 		default:
 			return fmt.Errorf("%T: unknown type for valueLength", v)
@@ -1270,7 +1273,7 @@ func (mod *Module) ValueLength(sp uint32) {
 
 // ValuePrepareString converts a value to a string and stores it.
 //
-// This method is called from syscall/js.Value.String() for String, Boolean
+// This method is called from syscall/js.Value.jsString() for jsString, Boolean
 // and Number types.
 func (mod *Module) ValuePrepareString(sp uint32) {
 	_ = mod.wrap("syscall/js.valuePrepareString", func() error {
@@ -1281,16 +1284,16 @@ func (mod *Module) ValuePrepareString(sp uint32) {
 			return err
 		}
 
-		var s *String
+		var s *jsString
 		switch vv := v.(type) {
 		// Boolean.
 		case bool:
-			s = &String{data: fmt.Sprintf("%t", vv)}
+			s = &jsString{data: fmt.Sprintf("%t", vv)}
 		// Number.
 		case float64:
-			s = &String{data: strconv.FormatFloat(vv, 'f', -1, 64)}
-		// String.
-		case *String:
+			s = &jsString{data: strconv.FormatFloat(vv, 'f', -1, 64)}
+		// jsString.
+		case *jsString:
 			s = vv
 		default:
 			return fmt.Errorf("%T: unable to convert type to string", v)
@@ -1306,7 +1309,7 @@ func (mod *Module) ValuePrepareString(sp uint32) {
 
 // ValueLoadString loads a string into memory.
 //
-// This method is called from syscall/js.Value.String().
+// This method is called from syscall/js.Value.jsString().
 func (mod *Module) ValueLoadString(sp uint32) {
 	_ = mod.wrap("syscall/js.valueLoadString", func() error {
 		v, err := mod.loadValue(sp + 8)
@@ -1314,7 +1317,7 @@ func (mod *Module) ValueLoadString(sp uint32) {
 			return err
 		}
 
-		s, ok := v.(*String)
+		s, ok := v.(*jsString)
 		if !ok {
 			return fmt.Errorf("%T: type not a string", v)
 		}
@@ -1353,15 +1356,15 @@ func (mod *Module) ValueInstanceOf(sp uint32) {
 
 		name := lookup.Name()
 		switch v.(type) {
-		case *Array:
+		case *jsArray:
 			if name == "Array" {
 				return mod.instance.SetUInt8(sp+24, 1)
 			}
-		case *Object:
+		case *jsObject:
 			if name == "Object" {
 				return mod.instance.SetUInt8(sp+24, 1)
 			}
-		case *Uint8Array:
+		case *jsUint8Array:
 			if name == "Uint8Array" {
 				return mod.instance.SetUInt8(sp+24, 1)
 			}
@@ -1384,9 +1387,9 @@ func (mod *Module) CopyBytesToGo(sp uint32) {
 			return err
 		}
 
-		src, ok := v.(*Uint8Array)
+		src, ok := v.(*jsUint8Array)
 		if !ok {
-			return fmt.Errorf("src: %T not type Uint8Array", v)
+			return fmt.Errorf("src: %T not type jsUint8Array", v)
 		}
 
 		if len(dst) == 0 || len(src.data) == 0 {
@@ -1410,9 +1413,9 @@ func (mod *Module) CopyBytesToJS(sp uint32) {
 			return err
 		}
 
-		dst, ok := v.(*Uint8Array)
+		dst, ok := v.(*jsUint8Array)
 		if !ok {
-			return fmt.Errorf("dst: %T not type Uint8Array", v)
+			return fmt.Errorf("dst: %T not type jsUint8Array", v)
 		}
 
 		src, err := mod.loadSlice(sp + 16)

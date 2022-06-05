@@ -9,8 +9,10 @@ import (
 // ErrFault is returned whenever memory was accessed that was not addressable.
 var ErrFault = errors.New("bad address")
 
+// Memory describes the interface to an instantiated module's memory.
 type Memory interface {
 	Mem(offset, length uint32) ([]byte, error)
+
 	GetUInt32(offset uint32) (uint32, error)
 	GetInt64(offset uint32) (int64, error)
 	GetFloat64(offset uint32) (float64, error)
