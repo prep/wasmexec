@@ -1,6 +1,67 @@
 # wasmexec
 wasmexec is runtime-agnostic implementation of Go's [wasm_exec.js](https://github.com/golang/go/blob/master/misc/wasm/wasm_exec.js) in Go. It currently has import hooks for [wasmer](wasmerexec/), [wasmtime](wasmtimexec/) and [wazero](wazeroexec/). Each runtime-dedicated package has its own example of an implementation that can run any of the [examples](examples/).
 
+## Basic implementation
+The per-runtime examples are a good starter, but you basically instantiate a Go Wasm module and wrap that instance up in a custom struct that implements several methods. At a minimum, your wrapper struct needs to satisfiy the [Instance](instance.go) interface.
+
+```go
+type Instance interface {
+    Memory
+
+    GetSP() (uint32, error)
+    Resume() error
+    Write(fd int, b []byte) (int, error)
+}
+```
+
+The `GetSP()` and `Resume()` methods are calls directly to the Go Wasm exports. The `Write()` method is called for writes to `stdout` or `stderr`.
+
+The [Memory](memory.go) interface describes what is needed to read and write to the Go Wasm memory. If your runtime exposes the memory as a `[]byte` (as wasmer and wasmtime do) then you can easily use the `NewMemory()` function to satisfy this interface.
+
+```go
+type Memory interface {
+    Mem(offset, length uint32) ([]byte, error)
+		
+    GetUInt32(offset uint32) (uint32, error)
+    GetInt64(offset uint32) (int64, error)
+    GetFloat64(offset uint32) (float64, error)
+    SetUInt8(offset uint32, val uint8) error
+    SetUInt32(offset, val uint32) error
+    SetInt64(offset uint32, val int64) error
+    SetFloat64(offset uint32, val float64) error
+}
+```
+
+### Optional interfaces
+Your wrapper struct can also implement additional methods that are called when applicable.
+
+#### Debug logging
+If the `debugLogger` interface is implemented, `Debug()` is called with debug messages. This is only useful when you're debugging issues with this package.
+
+```go
+type debugLogger interface {
+  Debug(format string, params ...any)
+}
+```
+
+#### Error logging
+If the `errorLogger` interface is implement, `Error()` is called for any error that might pop up during execution. At this stage, it is probably useful to implement this as this package isn't battle tested yet.
+
+```go
+type errorLogger interface {
+  Error(format string, params ...any)
+}
+```
+
+#### Exiting
+If the `exiter` interface is implemented, `Exit()` is called whenver the call to the `run()` Wasm function is done.
+
+```go
+type exiter interface {
+  Exit(code int)
+}
+```
+
 ## js.FuncOf()
 The guest can use [js.FuncOf()](https://pkg.go.dev/syscall/js#FuncOf) to create functions that can be called on the host via `Call()` on `*wasmexec.Module`.
 
@@ -29,7 +90,6 @@ On the host these functions can be called using `Call()` on `*wasmexec.Module`:
 
 ```go
 mod.Call("myEvent", []byte("Hello World!"))
-
 ```
 
 ## waPC
@@ -73,7 +133,6 @@ The guest can also send events to the host, which will be received by the host's
 
 ```go
 resp, err := wapc.HostCall("myBinding", "sample", "hello", []byte("Guest"))
-
 ```
 
 ## Acknowledgements

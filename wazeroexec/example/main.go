@@ -25,10 +25,6 @@ type Instance struct {
 	resumeFn api.Function
 }
 
-func (instance *Instance) Debug(format string, params ...interface{}) {
-	// log.Printf("DEBUG: "+format+"\n", params...)
-}
-
 func (instance *Instance) Error(format string, params ...interface{}) {
 	log.Printf("ERROR: "+format+"\n", params...)
 }
@@ -61,9 +57,6 @@ func (instance *Instance) Write(fd int, b []byte) (n int, err error) {
 	}
 
 	return n, err
-}
-
-func (instance *Instance) Exit(code int) {
 }
 
 // HostCall is an optional method that allows the guest to use a fake waPC

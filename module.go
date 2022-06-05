@@ -21,61 +21,26 @@ const nanHead = 0x7FF80000
 // NaN describes a not-a-number value.
 var NaN = math.NaN()
 
-// Properties describe the properties on an object.
-type Properties map[string]any
-
-// Object describes a JSON object.
-type Object struct {
-	properties Properties
-}
-
-// Array describes an array of elements.
-type Array struct {
-	elements []any
-}
-
-// Uint8Array describes a byte slice.
-type Uint8Array struct {
-	data []byte
-}
-
-// String represents a stored string.
-type String struct {
-	payload string
-}
-
-// Function describes a function.
-type Function struct {
-	name string
-	fn   func(args []any) any
-}
-
-func (fn Function) Name() string {
-	return fn.name
-}
-
-// newFuncObject returns a new function.
-func newFuncObject(fn func(args []any) any) *Function {
-	return &Function{fn: fn}
-}
-
-func toInt(v any) (int, error) {
-	if val, ok := v.(int); ok {
-		return val, nil
-	}
-
-	if val, ok := v.(float64); ok {
-		return int(val), nil
-	}
-
-	return 0, fmt.Errorf("%T: unable to convert to int", v)
-}
-
 // invokeContext keeps track of the response from the guest during an Invoke
 // call.
 type invokeContext struct {
 	guestResp []byte
 	guestErr  string
+}
+
+// debugLogger describes an instance that has implemented a debug logger.
+type debugLogger interface {
+	Debug(format string, params ...any)
+}
+
+// errorLogger describes an instance that has implemented an error logger.
+type errorLogger interface {
+	Error(format string, params ...any)
+}
+
+// exiter describes an Instance that has implemented an Exit method.
+type exiter interface {
+	Exit(code int)
 }
 
 // hostCaller describes an instance that has implemented the waPC HostCall method.
@@ -87,8 +52,12 @@ type hostCaller interface {
 // GOOS=js expects.
 type Module struct {
 	instance      Instance
-	waPC          hostCaller
 	invokeContext *invokeContext
+
+	debugLog debugLogger
+	errorLog errorLogger
+	exit     exiter
+	waPC     hostCaller
 
 	idcounter uint32
 	ids       map[any]uint32
@@ -98,12 +67,20 @@ type Module struct {
 
 // New returns a new Module.
 func New(instance Instance) *Module {
+	debugLog, _ := instance.(debugLogger)
+	errorLog, _ := instance.(errorLogger)
+	exit, _ := instance.(exiter)
 	waPC, _ := instance.(hostCaller)
 
 	var mod *Module
 	mod = &Module{
-		instance:  instance,
-		waPC:      waPC,
+		instance: instance,
+
+		debugLog: debugLog,
+		errorLog: errorLog,
+		exit:     exit,
+		waPC:     waPC,
+
 		idcounter: 10,
 		refcounts: make(map[uint32]int32),
 		ids: map[any]uint32{
@@ -131,6 +108,7 @@ func New(instance Instance) *Module {
 					},
 
 					"Date": &Function{
+						name: "Date",
 						fn: func([]any) any {
 							return &Object{
 								properties: Properties{
@@ -160,13 +138,13 @@ func New(instance Instance) *Module {
 								return []byte{}
 							}
 
-							length, err := toInt(args[0])
-							if err != nil {
+							length, ok := args[0].(float64)
+							if !ok {
 								return []byte{}
 							}
 
 							return &Uint8Array{
-								data: make([]byte, length),
+								data: make([]byte, uint32(length)),
 							}
 						},
 					},
@@ -176,19 +154,19 @@ func New(instance Instance) *Module {
 							"getRandomValues": &Function{
 								fn: func(args []any) any {
 									if len(args) != 1 {
-										mod.instance.Error("crypto.getRandomValues: %d: invalid number of arguments", len(args))
+										mod.error("crypto.getRandomValues: %d: invalid number of arguments", len(args))
 										return 0
 									}
 
 									a, ok := args[0].(*Uint8Array)
 									if !ok {
-										mod.instance.Error("crypto.getRandomValues: %T: not type Uint8Array", args[0])
+										mod.error("crypto.getRandomValues: %T: not type Uint8Array", args[0])
 										return 0
 									}
 
 									n, err := rand.Read(a.data)
 									if err != nil {
-										mod.instance.Error("crypto.getRandomValues: %v", err)
+										mod.error("crypto.getRandomValues: %v", err)
 										return 0
 									}
 
@@ -212,20 +190,20 @@ func New(instance Instance) *Module {
 							"write": &Function{
 								fn: func(args []any) any {
 									if len(args) != 6 {
-										mod.instance.Error("fs.write: %d: invalid number of arguments", len(args))
+										mod.error("fs.write: %d: invalid number of arguments", len(args))
 										return nil
 									}
 
 									val, ok := args[0].(float64)
 									if !ok {
-										mod.instance.Error("fs.write: %T: not type float64", args[0])
+										mod.error("fs.write: %T: not type float64", args[0])
 										return nil
 									}
 									fd := int(val)
 
 									buf, ok := args[1].(*Uint8Array)
 									if !ok {
-										mod.instance.Error("fs.write: %T: not type Uint8Array", args[1])
+										mod.error("fs.write: %T: not type Uint8Array", args[1])
 										return nil
 									}
 
@@ -261,7 +239,7 @@ func New(instance Instance) *Module {
 
 									callback, ok := args[5].(*Function)
 									if !ok {
-										mod.instance.Error("fs.write: %T: not type Function", args[5])
+										mod.error("fs.write: %T: not type Function", args[5])
 										return nil
 									}
 
@@ -395,7 +373,7 @@ func New(instance Instance) *Module {
 
 									mod.values[6].(*Object).properties["_pendingEvent"] = event
 									if err := mod.instance.Resume(); err != nil {
-										mod.instance.Error("_makeFuncWrapper: Resume: %v", err)
+										mod.error("_makeFuncWrapper: Resume: %v", err)
 										return nil
 									}
 
@@ -457,6 +435,18 @@ func (mod *Module) Invoke(_ context.Context, operation string, payload []byte) (
 // **************************** [ Helper methods ] ****************************
 // ****************************************************************************
 
+func (mod *Module) debug(format string, params ...any) {
+	if mod.debugLog != nil {
+		mod.debugLog.Debug(format, params...)
+	}
+}
+
+func (mod *Module) error(format string, params ...any) {
+	if mod.errorLog != nil {
+		mod.errorLog.Error(format, params...)
+	}
+}
+
 // TODO: Perhaps we need a better scheme of assigning IDs to in-memory objects.
 func (mod *Module) getID() uint32 {
 	id := mod.idcounter
@@ -483,19 +473,19 @@ func (mod *Module) loadValue(addr uint32) (any, error) {
 		return nil, err
 	}
 
-	mod.instance.Debug("   loadValue(id=%v)", id)
+	mod.debug("   loadValue(id=%v)", id)
 
 	return mod.values[id], nil
 }
 
 func (mod *Module) storeValue(addr uint32, v any) error {
-	mod.instance.Debug("   storeValue(addr=%v type=%T v=%v nil=%v)", addr, v, v, (v == nil))
+	mod.debug("   storeValue(addr=%v type=%T v=%v nil=%v)", addr, v, v, (v == nil))
 
 	switch vv := v.(type) {
 	case []byte:
-		mod.instance.Debug("   storeValue([]byte=%v)", string(vv))
+		mod.debug("   storeValue([]byte=%v)", string(vv))
 	case *Uint8Array:
-		mod.instance.Debug("   storeValue(Uint8Array=%v)", string(vv.data))
+		mod.debug("   storeValue(Uint8Array=%v)", string(vv.data))
 	}
 
 	// Convert any integer to a float64, which is akin to a JSON number.
@@ -562,7 +552,7 @@ func (mod *Module) storeValue(addr uint32, v any) error {
 
 	// Convert strings to the String type.
 	if str, ok := v.(string); ok {
-		v = &String{payload: str}
+		v = &String{data: str}
 	}
 
 	// Convert []byte to the Uint8Array type.
@@ -572,7 +562,7 @@ func (mod *Module) storeValue(addr uint32, v any) error {
 
 	// Create a unique signature of the value.
 	signature := fmt.Sprintf("%d", reflect.ValueOf(v).Pointer())
-	mod.instance.Debug("   storeValue(type=%T signature=%v)", v, signature)
+	mod.debug("   storeValue(type=%T signature=%v)", v, signature)
 
 	// Use the signature to check if this value has already been stored. If not,
 	// store it in the ids and values map.
@@ -605,7 +595,7 @@ func (mod *Module) storeValue(addr uint32, v any) error {
 		panic(fmt.Sprintf("%T: unknown value type", t))
 	}
 
-	mod.instance.Debug("   storeValue(id=%v typeFlag=%v refcount=%v signature=%q)", id, typeFlag, mod.refcounts[id], signature)
+	mod.debug("   storeValue(id=%v typeFlag=%v refcount=%v signature=%q)", id, typeFlag, mod.refcounts[id], signature)
 
 	// Store the type.
 	if err := mod.instance.SetUInt32(addr+4, nanHead|typeFlag); err != nil {
@@ -628,7 +618,7 @@ func (mod *Module) loadSlice(addr uint32) ([]byte, error) {
 		return nil, err
 	}
 
-	mod.instance.Debug("   loadSlice(offset=%v length=%v)", offset, length)
+	mod.debug("   loadSlice(offset=%v length=%v)", offset, length)
 
 	return mod.instance.Mem(uint32(offset), uint32(length))
 }
@@ -668,7 +658,7 @@ func (mod *Module) loadString(addr uint32) (string, error) {
 }
 
 func (mod *Module) reflectApply(v any, name string, args []any) (any, error) {
-	mod.instance.Debug("   reflectApply(name=%v)", name)
+	mod.debug("   reflectApply(name=%v)", name)
 
 	obj, err := mod.reflectGet(v, name)
 	if err != nil {
@@ -679,7 +669,7 @@ func (mod *Module) reflectApply(v any, name string, args []any) (any, error) {
 }
 
 func (mod *Module) reflectConstruct(v any, args []any) (any, error) {
-	mod.instance.Debug("   reflectConstruct(v=%v args=%v)", v, args)
+	mod.debug("   reflectConstruct(v=%v args=%v)", v, args)
 
 	if fn, ok := v.(*Function); ok {
 		return fn.fn(args), nil
@@ -689,7 +679,7 @@ func (mod *Module) reflectConstruct(v any, args []any) (any, error) {
 }
 
 func (mod *Module) reflectGet(v, key any) (any, error) {
-	mod.instance.Debug("   reflectGet(key=%v)", key)
+	mod.debug("   reflectGet(key=%v)", key)
 
 	if v == nil {
 		v = mod.values[5]
@@ -721,7 +711,7 @@ func (mod *Module) reflectGet(v, key any) (any, error) {
 }
 
 func (mod *Module) reflectSet(v, key, value any) error {
-	mod.instance.Debug("   reflectSet(v=%v key=%v value=%v)", v, key, value)
+	mod.debug("   reflectSet(v=%v key=%v value=%v)", v, key, value)
 
 	if v == nil {
 		v = mod.values[5]
@@ -750,7 +740,7 @@ func (mod *Module) reflectSet(v, key, value any) error {
 }
 
 func (mod *Module) reflectDeleteProperty(v, key any) error {
-	mod.instance.Debug("   reflectDelete(v=%v key=%v)", v, key)
+	mod.debug("   reflectDelete(v=%v key=%v)", v, key)
 
 	if v == nil {
 		v = mod.values[5]
@@ -783,17 +773,17 @@ func (mod *Module) reflectDeleteProperty(v, key any) error {
 
 func (mod *Module) wrap(name string, fn func() error) error {
 	if fn == nil {
-		mod.instance.Error("%s NOT IMPLEMENTED", name)
+		mod.error("%s NOT IMPLEMENTED", name)
 		return nil
 	}
 
 	if name != "" && name != "runtime.wasmWrite" {
-		mod.instance.Debug(name)
+		mod.debug(name)
 	}
 
 	if err := fn(); err != nil {
 		if name != "" {
-			mod.instance.Error("%s: %v", name, err)
+			mod.error("%s: %v", name, err)
 		}
 		return err
 	}
@@ -810,12 +800,16 @@ func (mod *Module) wrap(name string, fn func() error) error {
 // This method is called from the runtime package.
 func (mod *Module) WasmExit(sp uint32) {
 	_ = mod.wrap("runtime.wasmExit", func() error {
+		if mod.exit == nil {
+			return nil
+		}
+
 		v, err := mod.instance.GetUInt32(sp + 8)
 		if err != nil {
 			return err
 		}
 
-		mod.instance.Exit(int(v))
+		mod.exit.Exit(int(v))
 		return nil
 	})
 }
@@ -938,7 +932,7 @@ func (mod *Module) FinalizeRef(sp uint32) {
 				return fmt.Errorf("%d: could not find signature in values for id", id)
 			}
 
-			mod.instance.Debug("%d: deleting object", id)
+			mod.debug("%d: deleting object", id)
 
 			delete(mod.refcounts, id)
 			delete(mod.values, id)
@@ -1267,7 +1261,7 @@ func (mod *Module) ValueLength(sp uint32) {
 		case *Uint8Array:
 			return mod.instance.SetInt64(sp+16, int64(len(val.data)))
 		case *String:
-			return mod.instance.SetInt64(sp+16, int64(len(val.payload)))
+			return mod.instance.SetInt64(sp+16, int64(len(val.data)))
 		default:
 			return fmt.Errorf("%T: unknown type for valueLength", v)
 		}
@@ -1280,7 +1274,7 @@ func (mod *Module) ValueLength(sp uint32) {
 // and Number types.
 func (mod *Module) ValuePrepareString(sp uint32) {
 	_ = mod.wrap("syscall/js.valuePrepareString", func() error {
-		mod.instance.Debug("   valuePrepareString: sp=%v", sp)
+		mod.debug("   valuePrepareString: sp=%v", sp)
 
 		v, err := mod.loadValue(sp + 8)
 		if err != nil {
@@ -1291,10 +1285,10 @@ func (mod *Module) ValuePrepareString(sp uint32) {
 		switch vv := v.(type) {
 		// Boolean.
 		case bool:
-			s = &String{payload: fmt.Sprintf("%t", vv)}
+			s = &String{data: fmt.Sprintf("%t", vv)}
 		// Number.
 		case float64:
-			s = &String{payload: strconv.FormatFloat(vv, 'f', -1, 64)}
+			s = &String{data: strconv.FormatFloat(vv, 'f', -1, 64)}
 		// String.
 		case *String:
 			s = vv
@@ -1306,7 +1300,7 @@ func (mod *Module) ValuePrepareString(sp uint32) {
 			return err
 		}
 
-		return mod.instance.SetInt64(sp+24, int64(len(s.payload)))
+		return mod.instance.SetInt64(sp+24, int64(len(s.data)))
 	})
 }
 
@@ -1330,7 +1324,7 @@ func (mod *Module) ValueLoadString(sp uint32) {
 			return err
 		}
 
-		copy(dst, s.payload)
+		copy(dst, s.data)
 		return nil
 	})
 }
@@ -1350,7 +1344,7 @@ func (mod *Module) ValueInstanceOf(sp uint32) {
 			return err
 		}
 
-		mod.instance.Debug("   is %#v an instance of %#v?", v, t)
+		mod.debug("   is %#v an instance of %#v?", v, t)
 
 		lookup, ok := t.(interface{ Name() string })
 		if !ok {
