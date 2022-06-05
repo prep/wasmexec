@@ -7,8 +7,8 @@ import (
 )
 
 // Import the Go JavaScript functions.
-func Import(store *wasmer.Store, instance wasmexec.Instance) (*wasmer.ImportObject, *wasmexec.ModuleGo) {
-	mod := wasmexec.NewModuleGo(instance)
+func Import(store *wasmer.Store, instance wasmexec.Instance) (*wasmer.ImportObject, *wasmexec.Module) {
+	mod := wasmexec.New(instance)
 
 	wasmExit := wasmer.NewFunction(
 		store,

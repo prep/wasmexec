@@ -2,7 +2,7 @@
 wasmexec is runtime-agnostic implementation of Go's [wasm_exec.js](https://github.com/golang/go/blob/master/misc/wasm/wasm_exec.js) in Go. It currently has import hooks for [wasmer](wasmerexec/), [wasmtime](wasmtimexec/) and [wazero](wazeroexec/). Each runtime-dedicated package has its own example of an implementation that can run any of the [examples](examples/).
 
 ## js.FuncOf()
-The guest can use [js.FuncOf()](https://pkg.go.dev/syscall/js#FuncOf) to create functions that can be called on the host via `Call()` on `*wasmexec.ModuleGo`.
+The guest can use [js.FuncOf()](https://pkg.go.dev/syscall/js#FuncOf) to create functions that can be called on the host via `Call()` on `*wasmexec.Module`.
 
 ```go
 var uint8Array = js.Global().Get("Uint8Array")
@@ -25,7 +25,7 @@ func main() {
 }
 ```
 
-On the host these functions can be called using `Call()` on `*wasmexec.ModuleGo`:
+On the host these functions can be called using `Call()` on `*wasmexec.Module`:
 
 ```go
 mod.Call("myEvent", []byte("Hello World!"))
@@ -35,7 +35,7 @@ mod.Call("myEvent", []byte("Hello World!"))
 ## waPC
 wasmexec supports a fake waPC implementation built on top of the above-mentioned `js.FuncOf()` functionality. Due to the fact that the current Go Wasm compiler cannot export functions nor require import functions, a workaround was created to get the same effect.
 
-On the host instance you can call `Invoke()` on the `*wasmexec.ModuleGo` type to send something to the guest:
+On the host instance you can call `Invoke()` on the `*wasmexec.Module` type to send something to the guest:
 
 ```go
 result, err := mod.Invoke(context.Background(), "hello", []byte(`Hello World`))

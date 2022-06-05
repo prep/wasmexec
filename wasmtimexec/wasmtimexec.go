@@ -9,7 +9,7 @@ import (
 var i32 = wasmtime.NewValType(wasmtime.KindI32)
 
 // Import the Go JavaScript functions.
-func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.Instance) (*wasmexec.ModuleGo, error) {
+func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.Instance) (*wasmexec.Module, error) {
 	var err error
 	define := func(module, name string, item wasmtime.AsExtern) {
 		if err != nil {
@@ -19,7 +19,7 @@ func Import(store *wasmtime.Store, linker *wasmtime.Linker, instance wasmexec.In
 		err = linker.Define(module, name, item)
 	}
 
-	mod := wasmexec.NewModuleGo(instance)
+	mod := wasmexec.New(instance)
 
 	define("go", "runtime.wasmExit", wasmtime.NewFunc(
 		store,

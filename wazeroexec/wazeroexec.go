@@ -10,8 +10,8 @@ import (
 )
 
 // Import the Go JavaScript functions.
-func Import(ctx context.Context, runtime wazero.Runtime, ns wazero.Namespace, instance wasmexec.Instance) (*wasmexec.ModuleGo, error) {
-	mod := wasmexec.NewModuleGo(instance)
+func Import(ctx context.Context, runtime wazero.Runtime, ns wazero.Namespace, instance wasmexec.Instance) (*wasmexec.Module, error) {
+	mod := wasmexec.New(instance)
 
 	funcs := map[string]any{
 		"runtime.wasmExit":              mod.WasmExit,
