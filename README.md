@@ -16,7 +16,7 @@ type Instance interface {
 
 The `GetSP()` and `Resume()` methods are calls directly to the Go Wasm exports. The `Write()` method is called for writes to `stdout` or `stderr`.
 
-The [Memory](memory.go) interface describes what is needed to read and write to the Go Wasm memory. If your runtime exposes the memory as a `[]byte` (as wasmer and wasmtime do) then you can easily use the `NewMemory()` function to satisfy this interface.
+The [Memory](memory.go) interface describes an instantiated module's memory. If your runtime exposes the memory as a `[]byte` (as wasmer and wasmtime do) then you can easily use the `NewMemory()` function to satisfy this interface.
 
 ```go
 type Memory interface {
