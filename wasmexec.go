@@ -928,6 +928,7 @@ func (mod *ModuleGo) FinalizeRef(sp uint32) {
 			return fmt.Errorf("%d: missing reference count for id", id)
 		}
 
+		// Decrease the reference count.
 		ref--
 
 		// If the reference count is 0, clean up the object.
@@ -942,6 +943,8 @@ func (mod *ModuleGo) FinalizeRef(sp uint32) {
 			delete(mod.refcounts, id)
 			delete(mod.values, id)
 			delete(mod.ids, signature)
+		} else {
+			mod.refcounts[id] = ref
 		}
 
 		return nil
