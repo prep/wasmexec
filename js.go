@@ -1,5 +1,39 @@
 package wasmexec
 
+// errno describes an error "number".
+type errno string
+
+// This errno list is a subset of the errors in syscall/tables_js.go.
+const (
+	eNOSYS errno = "ENOSYS"
+)
+
+// errorResponse returns a errno callback response.
+func errorResponse(code errno) []any {
+	return []any{jsProperties{"code": string(code)}}
+}
+
+// errCallback calls the callback with the specified errno code.
+func errorCallback(code errno) *jsFunction {
+	return &jsFunction{
+		fn: func(args []any) any {
+			if len(args) == 0 {
+				return nil
+			}
+
+			// The last item in the list should be a callback function, according to
+			// the fsCall() function in syscall/fs.js.go.
+			callback, ok := args[len(args)-1].(*jsFunction)
+			if !ok {
+				return nil
+			}
+
+			callback.fn(errorResponse(code))
+			return nil
+		},
+	}
+}
+
 // jsFunction describes the constructor of an jsObject.
 type jsFunction struct {
 	name string

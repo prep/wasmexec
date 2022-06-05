@@ -12,9 +12,6 @@ import (
 	"time"
 )
 
-// enosys error code meaning "function not supported".
-const enosys = uint32(52)
-
 // nanHead is the NaN-header for values that are not a number, but an ID.
 const nanHead = 0x7FF80000
 
@@ -209,13 +206,13 @@ func New(instance Instance) *Module {
 									/*
 										offset, ok := args[2].(int)
 										if !ok {
-											mod.instance.Error("fs.write: %T: not type int", args[2])
+											mod.error("fs.write: %T: not type int", args[2])
 											return 9
 										}
 
 										val, ok = args[3].(float64)
 										if !ok {
-											mod.instance.Error("fs.write: %T: not type float64", args[3])
+											mod.error("fs.write: %T: not type float64", args[3])
 											return 9
 										}
 										length := int(val)
@@ -224,16 +221,12 @@ func New(instance Instance) *Module {
 										if args[4] != nil {
 											val, ok = args[4].(float64)
 											if !ok {
-												mod.instance.Error("fs.write: %T: not type float64", args[4])
+												mod.error("fs.write: %T: not type float64", args[4])
 												return 9
 											}
 
 											position = int64(val)
 										}
-
-										_ = offset
-										_ = length
-										_ = position
 									*/
 
 									callback, ok := args[5].(*jsFunction)
@@ -244,8 +237,7 @@ func New(instance Instance) *Module {
 
 									n, err := mod.instance.Write(fd, buf.data)
 									if err != nil {
-										// TODO: this does not work.
-										callback.fn([]any{enosys})
+										callback.fn(errorResponse(eNOSYS))
 										return nil
 									}
 
@@ -253,6 +245,30 @@ func New(instance Instance) *Module {
 									return nil
 								},
 							},
+
+							"chmod":     errorCallback(eNOSYS),
+							"chown":     errorCallback(eNOSYS),
+							"close":     errorCallback(eNOSYS),
+							"fchmod":    errorCallback(eNOSYS),
+							"fchown":    errorCallback(eNOSYS),
+							"fstat":     errorCallback(eNOSYS),
+							"fsync":     errorCallback(eNOSYS),
+							"ftruncate": errorCallback(eNOSYS),
+							"lchown":    errorCallback(eNOSYS),
+							"link":      errorCallback(eNOSYS),
+							"lstat":     errorCallback(eNOSYS),
+							"mkdir":     errorCallback(eNOSYS),
+							"open":      errorCallback(eNOSYS),
+							"read":      errorCallback(eNOSYS),
+							"readdir":   errorCallback(eNOSYS),
+							"readlink":  errorCallback(eNOSYS),
+							"rename":    errorCallback(eNOSYS),
+							"rmdir":     errorCallback(eNOSYS),
+							"stat":      errorCallback(eNOSYS),
+							"symlink":   errorCallback(eNOSYS),
+							"truncate":  errorCallback(eNOSYS),
+							"unlink":    errorCallback(eNOSYS),
+							"utimes":    errorCallback(eNOSYS),
 						},
 					},
 
@@ -262,12 +278,14 @@ func New(instance Instance) *Module {
 							"getgid":    newjsFunction(func([]any) any { return -1 }),
 							"geteuid":   newjsFunction(func([]any) any { return -1 }),
 							"getegid":   newjsFunction(func([]any) any { return -1 }),
-							"getgroups": newjsFunction(func([]any) any { return enosys }),
+							"getgroups": newjsFunction(func([]any) any { return []any{} }),
 							"pid":       -1,
 							"ppid":      -1,
-							"umask":     newjsFunction(func([]any) any { return enosys }),
-							"cwd":       newjsFunction(func([]any) any { return enosys }),
-							"chdir":     newjsFunction(func([]any) any { return enosys }),
+
+							// Unsure how to "throw" an eNOSYS, so return a reasonable value instead.
+							"umask": newjsFunction(func([]any) any { return 0o22 }),
+							"cwd":   newjsFunction(func(args []any) any { return "/" }),
+							"chdir": newjsFunction(func([]any) any { return nil }),
 						},
 					},
 
@@ -915,17 +933,23 @@ func (mod *Module) FinalizeRef(sp uint32) {
 			return err
 		}
 
+		mod.debug("   id=%v (%T)", id, id)
+
 		// Make sure the ID has a reference count.
 		ref, ok := mod.refcounts[id]
 		if !ok {
 			return fmt.Errorf("%d: missing reference count for id", id)
 		}
 
+		mod.debug("   ref=%v", ref)
+
 		// Decrease the reference count.
 		ref--
 
 		// If the reference count is 0, clean up the object.
 		if ref == 0 {
+			mod.debug("   deleting reference")
+
 			signature, ok := mod.values[id]
 			if !ok {
 				return fmt.Errorf("%d: could not find signature in values for id", id)
@@ -937,6 +961,7 @@ func (mod *Module) FinalizeRef(sp uint32) {
 			delete(mod.values, id)
 			delete(mod.ids, signature)
 		} else {
+			mod.debug("   decreasing ref")
 			mod.refcounts[id] = ref
 		}
 
@@ -1140,7 +1165,7 @@ func (mod *Module) ValueCall(sp uint32) {
 		return
 	}
 
-	if err = mod.storeValue(resultSP+56, err); err != nil {
+	if err = mod.storeValue(resultSP+56, err.Error()); err != nil {
 		return
 	}
 
@@ -1326,6 +1351,8 @@ func (mod *Module) ValueLoadString(sp uint32) {
 		if err != nil {
 			return err
 		}
+
+		mod.debug("   string=%v", s.data)
 
 		copy(dst, s.data)
 		return nil
