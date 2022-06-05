@@ -11,7 +11,7 @@ var ErrFault = errors.New("bad address")
 
 // Memory describes an instantiated module's memory.
 type Memory interface {
-	Mem(offset, length uint32) ([]byte, error)
+	Range(offset, length uint32) ([]byte, error)
 
 	GetUInt32(offset uint32) (uint32, error)
 	GetInt64(offset uint32) (int64, error)
@@ -29,8 +29,8 @@ func NewMemory(mem []byte) Memory {
 	return memory(mem)
 }
 
-// Mem returns part of memory block.
-func (mem memory) Mem(offset, length uint32) ([]byte, error) {
+// Range returns a specific block range of memory.
+func (mem memory) Range(offset, length uint32) ([]byte, error) {
 	if int(offset+length) >= len(mem) {
 		return nil, ErrFault
 	}

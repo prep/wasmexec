@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -132,7 +133,7 @@ func run(filename string) error {
 	}
 
 	// Silently fail, because not all examples implement waPC.
-	result, err := gomod.Invoke(nil, "hello", []byte("Host"))
+	result, err := gomod.Invoke(context.TODO(), "hello", []byte("Host"))
 	if err == nil {
 		fmt.Printf("Message from guest: %s\n", string(result))
 	}

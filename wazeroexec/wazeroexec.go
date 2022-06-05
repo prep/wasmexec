@@ -60,6 +60,15 @@ func NewMemory(mem api.Memory) *Memory {
 	return &Memory{Memory: mem}
 }
 
+func (mem *Memory) Range(offset, length uint32) ([]byte, error) {
+	data, ok := mem.Read(context.Background(), offset, length)
+	if !ok {
+		return nil, wasmexec.ErrFault
+	}
+
+	return data, nil
+}
+
 func (mem *Memory) GetUInt32(offset uint32) (uint32, error) {
 	val, ok := mem.ReadUint32Le(context.Background(), offset)
 	if !ok {
@@ -85,15 +94,6 @@ func (mem *Memory) GetFloat64(offset uint32) (float64, error) {
 	}
 
 	return val, nil
-}
-
-func (mem *Memory) Mem(offset, length uint32) ([]byte, error) {
-	data, ok := mem.Read(context.Background(), offset, length)
-	if !ok {
-		return nil, wasmexec.ErrFault
-	}
-
-	return data, nil
 }
 
 func (mem *Memory) SetUInt8(offset uint32, val uint8) error {

@@ -637,7 +637,7 @@ func (mod *Module) loadSlice(addr uint32) ([]byte, error) {
 
 	mod.debug("   loadSlice(offset=%v length=%v)", offset, length)
 
-	return mod.instance.Mem(uint32(offset), uint32(length))
+	return mod.instance.Range(uint32(offset), uint32(length))
 }
 
 // loadSliceOfValues returns a slice of values that is referenced by the
@@ -851,7 +851,7 @@ func (mod *Module) WasmWrite(sp uint32) {
 			return err
 		}
 
-		mem, err := mod.instance.Mem(uint32(p), n)
+		mem, err := mod.instance.Range(uint32(p), n)
 		if err != nil {
 			return err
 		}
