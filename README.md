@@ -1,7 +1,7 @@
 # wasmexec
 wasmexec is runtime-agnostic implementation of Go's [wasm_exec.js](https://github.com/golang/go/blob/master/misc/wasm/wasm_exec.js) in Go. It currently has import hooks for [wasmer](wasmerexec/), [wasmtime](wasmtimexec/) and [wazero](wazeroexec/). Each runtime-dedicated package has its own example of an implementation that can run any of the [examples](examples/).
 
-## 1. Basic implementation
+## 1. Minimal implementation
 The per-runtime examples are a good starter, but you basically instantiate a Go Wasm module and wrap that instance up in a custom struct that implements several methods. At a minimum, your wrapper struct needs to satisfiy the [Instance](instance.go) interface.
 
 ```go

@@ -1,8 +1,6 @@
 # examples
-This directory contains some Wasm examples. Compile them as follows:
+This directory contains some Wasm examples. Each example can be compiled like this:
 
-```
-env GOOS=js GOARCH=wasm go build -o example1.wasm example1.go
-env GOOS=js GOARCH=wasm go build -o example2.wasm example2.go
-env GOOS=js GOARCH=wasm go build -o example3.wasm example3.go
+```go
+env GOOS=js GOARCH=wasm go build -o example.wasm 
 ```
