@@ -2,7 +2,9 @@
 wasmexec is runtime-agnostic implementation of Go's [wasm_exec.js](https://github.com/golang/go/blob/master/misc/wasm/wasm_exec.js) in Go. It currently has import hooks for [wasmer](wasmerexec/), [wasmtime](wasmtimexec/) and [wazero](wazeroexec/). Each runtime-dedicated package has its own example of an implementation that can run any of the [examples](examples/).
 
 ## 1. Minimum implementation
-The `wasmexec.New()` function requires an [Instance](intance.go) interface that describes the minimum implementation of a stateful host _instance_ of the Go Wasm module. More simply put: whenever you instantiate a Go Wasm module, you need to wrap that up into a custom structure that implements at least this interface:
+The `wasmexec.New()` function requires an [Instance](intance.go) interface that describes the minimum implementation of a stateful host _instance_ of the Go Wasm module.
+
+Simply put: whenever you instantiate a Go Wasm module, you need to wrap that up into a custom structure that implements at least this interface.
 
 ```go
 type Instance interface {
@@ -13,9 +15,7 @@ type Instance interface {
 }
 ```
 
-The `GetSP()` and `Resume()` methods are calls directly to the Go Wasm exports.
-
-The [Memory](memory.go) interface describes an instantiated module's memory. If your runtime exposes the memory as a `[]byte` (as wasmer and wasmtime do) then you can easily use the `NewMemory()` function to satisfy this interface.
+The `GetSP()` and `Resume()` methods are calls directly to the Go Wasm exports. The [Memory](memory.go) interface describes an instantiated module's memory.
 
 ```go
 type Memory interface {
@@ -30,6 +30,8 @@ type Memory interface {
     SetFloat64(offset uint32, val float64) error
 }
 ```
+
+If your runtime exposes the memory as a `[]byte` (as wasmer and wasmtime do) then you can easily use the `NewMemory()` function to satisfy this interface. If not, a custom implementation needs to be written (like wazero).
 
 ## 2. Optional implementation
 Your wrapper struct can also implement additional methods that are called when applicable.
