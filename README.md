@@ -10,17 +10,16 @@ type Instance interface {
 
     GetSP() (uint32, error)
     Resume() error
-    Write(fd int, b []byte) (int, error)
 }
 ```
 
-The `GetSP()` and `Resume()` methods are calls directly to the Go Wasm exports. The `Write()` method is called for writes to `stdout` or `stderr`.
+The `GetSP()` and `Resume()` methods are calls directly to the Go Wasm exports.
 
 The [Memory](memory.go) interface describes an instantiated module's memory. If your runtime exposes the memory as a `[]byte` (as wasmer and wasmtime do) then you can easily use the `NewMemory()` function to satisfy this interface.
 
 ```go
 type Memory interface {
-    Mem(offset, length uint32) ([]byte, error)
+    Range(offset, length uint32) ([]byte, error)
 		
     GetUInt32(offset uint32) (uint32, error)
     GetInt64(offset uint32) (int64, error)
@@ -40,25 +39,35 @@ If the `debugLogger` interface is implemented, `Debug()` is called with debug me
 
 ```go
 type debugLogger interface {
-  Debug(format string, params ...any)
+    Debug(format string, params ...any)
 }
 ```
 
 ### 2.2. Error logging
-If the `errorLogger` interface is implement, `Error()` is called for any error that might pop up during execution. At this stage, it is probably useful to implement this as this package isn't battle tested yet.
+If the `errorLogger` interface is implemented, `Error()` is called for any error that might pop up during execution. At this stage, it is probably useful to implement this as this package isn't battle tested yet.
 
 ```go
 type errorLogger interface {
-  Error(format string, params ...any)
+    Error(format string, params ...any)
 }
 ```
 
-### 2.3. Exiting
+### 2.3. Writer
+If the `fdWriter` interface is implemented, `Write()` is called for any data being sent to `stdout` or `stderr. It is highly recommended that this is implemented.
+
+```go
+type fdWriter interface {
+    Write(fd int, data []byte) (n int, err error)
+}
+
+```
+
+### 2.4. Exiting
 If the `exiter` interface is implemented, `Exit()` is called whenver the call to the `run()` Wasm function is done.
 
 ```go
 type exiter interface {
-  Exit(code int)
+    Exit(code int)
 }
 ```
 

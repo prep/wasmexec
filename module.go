@@ -35,6 +35,11 @@ type errorLogger interface {
 	Error(format string, params ...any)
 }
 
+// fdWriter describes an instance that has implemented os.Write.
+type fdWriter interface {
+	Write(fd int, data []byte) (n int, err error)
+}
+
 // exiter describes an Instance that has implemented an Exit method.
 type exiter interface {
 	Exit(code int)
@@ -53,6 +58,7 @@ type Module struct {
 
 	debugLog debugLogger
 	errorLog errorLogger
+	writer   fdWriter
 	exit     exiter
 	waPC     hostCaller
 
@@ -66,6 +72,7 @@ type Module struct {
 func New(instance Instance) *Module {
 	debugLog, _ := instance.(debugLogger)
 	errorLog, _ := instance.(errorLogger)
+	writer, _ := instance.(fdWriter)
 	exit, _ := instance.(exiter)
 	waPC, _ := instance.(hostCaller)
 
@@ -75,6 +82,7 @@ func New(instance Instance) *Module {
 
 		debugLog: debugLog,
 		errorLog: errorLog,
+		writer:   writer,
 		exit:     exit,
 		waPC:     waPC,
 
@@ -235,7 +243,7 @@ func New(instance Instance) *Module {
 										return nil
 									}
 
-									n, err := mod.instance.Write(fd, buf.data)
+									n, err := mod.write(fd, buf.data)
 									if err != nil {
 										callback.fn(errorResponse(eNOSYS))
 										return nil
@@ -462,6 +470,14 @@ func (mod *Module) error(format string, params ...any) {
 	if mod.errorLog != nil {
 		mod.errorLog.Error(format, params...)
 	}
+}
+
+func (mod *Module) write(fd int, data []byte) (int, error) {
+	if mod.writer == nil {
+		return 0, errors.New("no writer available")
+	}
+
+	return mod.writer.Write(fd, data)
 }
 
 // TODO: Perhaps we need a better scheme of assigning IDs to in-memory objects.
@@ -851,12 +867,12 @@ func (mod *Module) WasmWrite(sp uint32) {
 			return err
 		}
 
-		mem, err := mod.instance.Range(uint32(p), n)
+		data, err := mod.instance.Range(uint32(p), n)
 		if err != nil {
 			return err
 		}
 
-		_, err = mod.instance.Write(int(fd), mem)
+		_, err = mod.write(int(fd), data)
 		return err
 	})
 }
