@@ -3,8 +3,6 @@
 .vscode
 Makefile
 examples/*/*.wasm
-go.mod
-go.sum
 wasmerexec/example/wasmerexec
 wasmtimexec/example/wasmtimexec
 wazeroexec/example/wazeroexec

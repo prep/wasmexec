@@ -87,7 +87,7 @@ func run(filename string) error {
 	instance := &Instance{}
 
 	// Import the wasmexec functions.
-	gomod, err := wazeroexec.Import(ctx, runtime, runtime, instance)
+	gomod, err := wazeroexec.Import(ctx, runtime, instance)
 	if err != nil {
 		return err
 	}

@@ -10,7 +10,12 @@ import (
 )
 
 // Import the Go JavaScript functions.
-func Import(ctx context.Context, runtime wazero.Runtime, ns wazero.Namespace, instance wasmexec.Instance) (*wasmexec.Module, error) {
+func Import(ctx context.Context, runtime wazero.Runtime, instance wasmexec.Instance) (*wasmexec.Module, error) {
+	return ImportWithNamespace(ctx, runtime, runtime, instance)
+}
+
+// ImportWithNamespace imports the Go JavaScript functions in this namespace.
+func ImportWithNamespace(ctx context.Context, runtime wazero.Runtime, ns wazero.Namespace, instance wasmexec.Instance) (*wasmexec.Module, error) {
 	mod := wasmexec.New(instance)
 
 	funcs := map[string]any{

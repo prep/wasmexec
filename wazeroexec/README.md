@@ -18,3 +18,9 @@ func main() {
   // ...
 }
 ```
+
+If you want to import these functions on your namespace, use:
+
+```go
+wazeroexec.ImportWithNamespace(ctx, runtime, ns, instance)
+```
