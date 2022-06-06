@@ -2,9 +2,8 @@
 wasmexec is runtime-agnostic implementation of Go's [wasm_exec.js](https://github.com/golang/go/blob/master/misc/wasm/wasm_exec.js) in Go. It currently has import hooks for [wasmer](wasmerexec/), [wasmtime](wasmtimexec/) and [wazero](wazeroexec/). Each runtime-dedicated package has its own example of an implementation that can run any of the [examples](examples/).
 
 ## 1. Minimum implementation
-The `wasmexec.New()` function requires an [Instance](intance.go) interface that describes the minimum implementation of a stateful host _instance_ of the Go Wasm module.
+When a Go Wasm module is instantiated, it needs to be wrapped up in a structure that implements the minimum set of methods in order to run. `wasmexec.New()` accepts the [Instance](instance.go) interface.
 
-Simply put: whenever you instantiate a Go Wasm module, you need to wrap that up into a custom structure that implements at least this interface.
 
 ```go
 type Instance interface {
@@ -15,7 +14,7 @@ type Instance interface {
 }
 ```
 
-The `GetSP()` and `Resume()` methods are calls directly to the Go Wasm exports. The [Memory](memory.go) interface describes an instantiated module's memory.
+The `GetSP()` and `Resume()` methods are calls directly to the Go Wasm exports. The [Memory](memory.go) interface wraps the Go Wasm module's memory.
 
 ```go
 type Memory interface {
@@ -65,11 +64,20 @@ type fdWriter interface {
 ```
 
 ### 2.4. Exiting
-If the `exiter` interface is implemented, `Exit()` is called whenver the call to the `run()` Wasm function is done.
+If the `exiter` interface is implemented, `Exit()` is called whenever the call to the `run()` Wasm function is done.
 
 ```go
 type exiter interface {
     Exit(code int)
+}
+```
+
+### 2.5. waPC
+If the `hostCaller` interface is implemented, `HostCall()` is called whenever the waPC guest sends information to the host. More information on this can be found in the [wapc](wapc/) package.
+
+```go
+type hostCaller interface {
+    HostCall(string, string, string, []byte) ([]byte, error)
 }
 ```
 
@@ -103,48 +111,5 @@ On the host these functions can be called using `Call()` on `*wasmexec.Module`:
 mod.Call("myEvent", []byte("Hello World!"))
 ```
 
-## 4. waPC
-wasmexec supports a fake waPC implementation built on top of the above-mentioned `js.FuncOf()` functionality. Due to the fact that the current Go Wasm compiler cannot export functions nor require import functions, a workaround was created to get the same effect.
-
-On the host instance you can call `Invoke()` on the `*wasmexec.Module` type to send something to the guest:
-
-```go
-result, err := mod.Invoke(context.Background(), "hello", []byte(`Hello World`))
-```
-
-The host can also receive events by implementing `HostCall()` on the instance:
-
-```go
-func (instance *Instance) HostCall(binding, namespace, operation string, payload []byte) ([]byte, error) {
-    // ...
-}
-```
-
-On the guest, events from the host's `Invoke()` calls can be received as follows:
-
-```go
-import (
-    "fmt"
-
-    "github.com/prep/wasmexec/wapc"
-)
-
-func hello(payload []byte) ([]byte, error) {
-    return []byte("Hello back!"), nil
-}
-
-func main() {
-    wapc.RegisterFunctions(wapc.Functions{
-        "hello": hello,
-    })
-}
-```
-
-The guest can also send events to the host, which will be received by the host's `HostCall()` function:
-
-```go
-resp, err := wapc.HostCall("myBinding", "sample", "hello", []byte("Guest"))
-```
-
-## 5. Acknowledgements
+## 4. Acknowledgements
 This implementation was made possible by allowing me to peek at mattn's [implementation](https://github.com/mattn/gowasmer/) as well as Vedhavyas Singareddi's [go-wasm-adapter](https://github.com/go-wasm-adapter/go-wasm/).
