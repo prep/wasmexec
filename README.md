@@ -1,8 +1,8 @@
 # wasmexec
 wasmexec is runtime-agnostic implementation of Go's [wasm_exec.js](https://github.com/golang/go/blob/master/misc/wasm/wasm_exec.js) in Go. It currently has import hooks for [wasmer](wasmerexec/), [wasmtime](wasmtimexec/) and [wazero](wazeroexec/). Each runtime-dedicated package has its own example of an implementation that can run any of the [examples](examples/).
 
-## 1. Minimal implementation
-The per-runtime examples are a good starter, but you basically instantiate a Go Wasm module and wrap that instance up in a custom struct that implements several methods. At a minimum, your wrapper struct needs to satisfiy the [Instance](instance.go) interface.
+## 1. Minimum implementation
+The `wasmexec.New()` function requires an [Instance](intance.go) interface that describes the minimum implementation of a stateful host _instance_ of the Go Wasm module. More simply put: whenever you instantiate a Go Wasm module, you need to wrap that up into a custom structure that implements at least this interface:
 
 ```go
 type Instance interface {
@@ -53,7 +53,7 @@ type errorLogger interface {
 ```
 
 ### 2.3. Writer
-If the `fdWriter` interface is implemented, `Write()` is called for any data being sent to `stdout` or `stderr. It is highly recommended that this is implemented.
+If the `fdWriter` interface is implemented, `Write()` is called for any data being sent to `stdout` or `stderr`. It is highly recommended that this is implemented.
 
 ```go
 type fdWriter interface {
