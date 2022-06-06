@@ -2,7 +2,7 @@
 wasmexec is runtime-agnostic implementation of Go's [wasm_exec.js](https://github.com/golang/go/blob/master/misc/wasm/wasm_exec.js) in Go. It currently has import hooks for [wasmer](wasmerexec/), [wasmtime](wasmtimexec/) and [wazero](wazeroexec/). Each runtime-dedicated package has its own example of an implementation that can run any of the [examples](examples/).
 
 ## 1. Minimum implementation
-When a Go Wasm module is instantiated, it needs to be wrapped up in a structure that implements the minimum set of methods in order to run. `wasmexec.New()` accepts the [Instance](instance.go) interface.
+When a Go Wasm module is instantiated, it needs to be wrapped up in a structure that implements the minimum set of methods in order to run. `wasmexec.New()` requires at least this [Instance](instance.go) interface.
 
 
 ```go
@@ -33,7 +33,7 @@ type Memory interface {
 If your runtime exposes the memory as a `[]byte` (as wasmer and wasmtime do) then you can easily use the `NewMemory()` function to satisfy this interface. If not, a custom implementation needs to be written (like wazero).
 
 ## 2. Optional implementation
-Your wrapper struct can also implement additional methods that are called when applicable.
+The above-mentioned instance wrapper may also implement additional methods for extra functionality.
 
 ### 2.1. Debug logging
 If the `debugLogger` interface is implemented, `Debug()` is called with debug messages. This is only useful when you're debugging issues with this package.
@@ -54,7 +54,7 @@ type errorLogger interface {
 ```
 
 ### 2.3. Writer
-If the `fdWriter` interface is implemented, `Write()` is called for any data being sent to `stdout` or `stderr`. It is highly recommended that this is implemented.
+If the `fdWriter` interface is implemented, `Write()` is called for any data being sent to `stdout` or `stderr`. **It is highly recommended that this is implemented**.
 
 ```go
 type fdWriter interface {

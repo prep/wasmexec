@@ -4,17 +4,9 @@ This package provides an import hook for [wasmtime-go](https://github.com/byteco
 Usage:
 
 ```go
-import (
-  // ...
-  "github.com/prep/wasmexec/wasmtimexec"
-  // ...
-)
+import "github.com/prep/wasmexec/wasmtimexec"
+```
 
-func main() {
-  // ...
-  if err = wasmtimexec.Import(store, linker, instance); err != nil {
-    // handle error
-  }
-  // ...
-}
+```go
+err := wasmtimexec.Import(store, linker, instance)
 ```

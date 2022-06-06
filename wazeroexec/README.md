@@ -4,23 +4,15 @@ This package provides an import hook for [wazero](https://github.com/tetratelabs
 Usage:
 
 ```go
-import (
-  // ...
-  "github.com/prep/wasmexec/wazeroexec"
-  // ...
-)
-
-func main() {
-  // ...
-  if err = wazeroexec.Import(ctx, runtime, instance); err != nil {
-    // handle error
-  }
-  // ...
-}
+import "github.com/prep/wasmexec/wazeroexec"
 ```
 
-If you want to import these functions on your namespace, use:
+```go
+err := wazeroexec.Import(ctx, runtime, instance)
+```
+
+Or if you want to import these functions on your namespace:
 
 ```go
-wazeroexec.ImportWithNamespace(ctx, runtime, ns, instance)
+err := wazeroexec.ImportWithNamespace(ctx, runtime, ns, instance)
 ```

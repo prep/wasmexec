@@ -4,15 +4,9 @@ This package provides an import hook for [wasmer-go](https://github.com/wasmerio
 Usage:
 
 ```go
-import (
-  // ...
-  "github.com/prep/wasmexec/wasmerexec"
-  // ...
-)
+import "github.com/prep/wasmexec/wasmerexec"
+```
 
-func main() {
-  // ...
-  imports := wasmerexec.Import(store, instance)
-  // ...
-}
+```go
+imports := wasmerexec.Import(store, instance)
 ```
