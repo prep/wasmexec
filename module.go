@@ -360,7 +360,7 @@ func New(instance Instance) *Module {
 										return mod.waPC.HostCall(string(binding.data), string(namespace.data), string(operation.data), payload.data)
 									}()
 									if err != nil {
-										return []any{nil, err.Error()}
+										return []any{nil, &jsString{data: err.Error()}}
 									}
 
 									return []any{&jsUint8Array{data: resp}, nil}

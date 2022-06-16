@@ -48,7 +48,7 @@ func HostCall(binding, namespace, operation string, payload []byte) ([]byte, err
 
 	var err error
 	if errValue := result.Index(1); !errValue.IsNull() {
-		err = errors.New(string(bytesFromJS(errValue)))
+		err = errors.New(errValue.String())
 	}
 
 	return response, err
