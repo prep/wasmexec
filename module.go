@@ -514,13 +514,6 @@ func (mod *Module) loadValue(addr uint32) (any, error) {
 func (mod *Module) storeValue(addr uint32, v any) error {
 	mod.debug("   storeValue(addr=%v type=%T v=%v nil=%v)", addr, v, v, (v == nil))
 
-	switch vv := v.(type) {
-	case []byte:
-		mod.debug("   storeValue([]byte=%v)", string(vv))
-	case *jsUint8Array:
-		mod.debug("   storeValue(jsUint8Array=%v)", string(vv.data))
-	}
-
 	// Convert any integer to a float64, which is akin to a JSON number.
 	switch num := v.(type) {
 	case int:
