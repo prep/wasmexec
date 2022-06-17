@@ -106,7 +106,12 @@ func guestError(message string) {
 
 // bytesFromJS converts a js.Value to a []byte.
 func bytesFromJS(v js.Value) []byte {
-	s := make([]byte, v.Length())
+	length := v.Length()
+	if length == 0 {
+		return nil
+	}
+
+	s := make([]byte, length)
 	js.CopyBytesToGo(s, v)
 	return s
 }
