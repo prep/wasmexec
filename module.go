@@ -1383,8 +1383,6 @@ func (mod *Module) ValueInstanceOf(sp uint32) {
 			return err
 		}
 
-		mod.debug("   is %#v an instance of %#v?", v, t)
-
 		lookup, ok := t.(interface{ Name() string })
 		if !ok {
 			return mod.instance.SetUInt8(sp+24, 0)
@@ -1451,16 +1449,13 @@ func (mod *Module) CopyBytesToJS(sp uint32) {
 
 		dst, ok := v.(*jsUint8Array)
 		if !ok {
+			_ = mod.instance.SetUInt8(sp+48, 1)
 			return fmt.Errorf("dst: %T not type jsUint8Array", v)
 		}
 
 		src, err := mod.loadSlice(sp + 16)
 		if err != nil {
 			return err
-		}
-
-		if len(dst.data) == 0 || len(src) == 0 {
-			return mod.instance.SetUInt8(sp+48, 0)
 		}
 
 		n := copy(dst.data, src)
