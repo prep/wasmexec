@@ -83,14 +83,17 @@ func guestCall(_ js.Value, args []js.Value) any {
 		return false
 	}
 
-	// Call the operation function.
-	response, err := fn(payload)
-	if err != nil {
-		guestError(err.Error())
-		return false
-	}
+	// Call the function in a goroutine to allow it to perform non-blocking calls.
+	go func() {
+		response, err := fn(payload)
+		if err != nil {
+			guestError(err.Error())
+			return
+		}
 
-	guestResponse(response)
+		guestResponse(response)
+	}()
+
 	return true
 }
 

@@ -23,6 +23,11 @@ var NaN = math.NaN()
 type invokeContext struct {
 	guestResp []byte
 	guestErr  string
+	success   chan bool
+}
+
+func newInvokeContext() *invokeContext {
+	return &invokeContext{success: make(chan bool, 1)}
 }
 
 // debugLogger describes an instance that has implemented a debug logger.
@@ -308,6 +313,7 @@ func New(instance Instance) *Module {
 
 									if resp, ok := args[0].(*jsUint8Array); ok {
 										mod.invokeContext.guestResp = resp.data
+										mod.invokeContext.success <- true
 									}
 
 									return nil
@@ -321,6 +327,7 @@ func New(instance Instance) *Module {
 
 									if resp, ok := args[0].(*jsUint8Array); ok {
 										mod.invokeContext.guestErr = string(resp.data)
+										mod.invokeContext.success <- false
 									}
 
 									return nil
@@ -436,24 +443,25 @@ func (mod *Module) Call(name string, args ...any) (any, error) {
 }
 
 // Invoke calls operation with the specified payload and returns a []byte payload.
-func (mod *Module) Invoke(_ context.Context, operation string, payload []byte) ([]byte, error) {
-	mod.invokeContext = &invokeContext{}
+func (mod *Module) Invoke(ctx context.Context, operation string, payload []byte) ([]byte, error) {
+	mod.invokeContext = newInvokeContext()
 
-	result, err := mod.Call("__guest_call", operation, payload)
+	_, err := mod.Call("__guest_call", operation, payload)
 	if err != nil {
 		return nil, err
 	}
 
-	success, ok := result.(bool)
-	if !ok {
-		return nil, fmt.Errorf("%T: unexpected response type from __guest_call", result)
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+
+	case ok := <-mod.invokeContext.success:
+		if !ok {
+			return nil, errors.New(mod.invokeContext.guestErr)
+		}
 	}
 
-	if success {
-		return mod.invokeContext.guestResp, nil
-	}
-
-	return nil, errors.New(mod.invokeContext.guestErr)
+	return mod.invokeContext.guestResp, nil
 }
 
 // ****************************************************************************
