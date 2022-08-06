@@ -7,7 +7,7 @@ This implementation is built on top of the [js.FuncOf()](https://pkg.go.dev/sysc
 On the host instance you can call `Invoke()` on `*wasmexec.Module` to send something to the guest:
 
 ```go
-result, err := mod.Invoke(ctx, "hello", []byte(`Hello World`))
+result, err := mod.Invoke("hello", []byte(`Hello World`))
 ```
 
 The host can also receive events by implementing `HostCall()` on the instance:
