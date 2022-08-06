@@ -120,19 +120,28 @@ func run(filename string) error {
 		return errors.New("resume: missing export")
 	}
 
+	args := []string{filename, "-runtime=wazero", "arg1", "arg2"}
+	envs := []string{"HOME=/", "PWD=/home/test"}
+
+	// Set the args and the environment variables.
+	argc, argv, err := wasmexec.SetArgs(instance.Memory, args, envs)
+	if err != nil {
+		return err
+	}
+
 	// Fetch the "run" function and call it. This starts the program.
 	runFn := module.ExportedFunction("run")
 	if runFn == nil {
 		return errors.New("run: missing export")
 	}
 
-	_, err = runFn.Call(ctx, 0, 0)
+	_, err = runFn.Call(ctx, uint64(argc), uint64(argv))
 	if err != nil {
 		return err
 	}
 
 	// Silently fail, because not all examples implement waPC.
-	result, err := gomod.Invoke(ctx, "hello", []byte("Host"))
+	result, err := gomod.Invoke("hello", []byte("Host"))
 	if err == nil {
 		fmt.Printf("Message from guest: %s\n", string(result))
 	}

@@ -104,3 +104,75 @@ func (mem memory) SetFloat64(offset uint32, val float64) error {
 	binary.LittleEndian.PutUint64(mem[offset:], math.Float64bits(val))
 	return nil
 }
+
+// wasmMinDataAddr
+const wasmMinDataAddr = 4096 + 8192
+
+// SetArgs sets the specified arguments and environment variables.
+func SetArgs(mem Memory, args, envs []string) (int32, int32, error) {
+	offset := uint32(4096)
+
+	strPtr := func(value string) (uint32, error) {
+		ptr := offset
+		bytes := []byte(value + "\000")
+		length := uint32(len(bytes))
+
+		data, err := mem.Range(ptr, length)
+		if err != nil {
+			return 0, err
+		}
+
+		_ = copy(data, bytes)
+
+		offset += length
+		if offset%8 != 0 {
+			offset += 8 - (offset % 8)
+		}
+
+		return ptr, nil
+	}
+
+	// Process the command line arguments.
+	var argvPtrs []uint32
+	for _, arg := range args {
+		ptr, err := strPtr(arg)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		argvPtrs = append(argvPtrs, ptr)
+	}
+	argvPtrs = append(argvPtrs, 0)
+
+	// Process the environment variables.
+	for _, env := range envs {
+		ptr, err := strPtr(env)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		argvPtrs = append(argvPtrs, ptr)
+	}
+	argvPtrs = append(argvPtrs, 0)
+
+	// Write the list of pointers. The start of this list is what argv points to.
+	argv := offset
+	for _, ptr := range argvPtrs {
+		if err := mem.SetUInt32(offset, ptr); err != nil {
+			return 0, 0, err
+		}
+		if err := mem.SetUInt32(offset+4, 0); err != nil {
+			return 0, 0, err
+		}
+
+		offset += 8
+	}
+
+	// Make sure the args + environment variables have not overwritten the
+	// data section.
+	if offset >= wasmMinDataAddr {
+		return 0, 0, errors.New("total length of command line and environment variables exceeds limit")
+	}
+
+	return int32(len(args)), int32(argv), nil
+}

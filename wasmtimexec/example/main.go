@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -140,19 +139,28 @@ func run(filename string) error {
 		return errors.New("resume: export is not a function")
 	}
 
+	args := []string{filename, "-runtime=wasmtime", "arg1", "arg2"}
+	envs := []string{"HOME=/", "PWD=/home/test"}
+
+	// Set the args and the environment variables.
+	argc, argv, err := wasmexec.SetArgs(instance.Memory, args, envs)
+	if err != nil {
+		return err
+	}
+
 	// Fetch the "run" function and call it. This starts the program.
 	runFn := instance.GetFunc(store, "run")
 	if runFn == nil {
 		return errors.New("run: missing export")
 	}
 
-	_, err = runFn.Call(store, 0, 0)
+	_, err = runFn.Call(store, argc, argv)
 	if err != nil {
 		return err
 	}
 
 	// Silently fail, because not all examples implement waPC.
-	result, err := gomod.Invoke(context.TODO(), "hello", []byte("Host"))
+	result, err := gomod.Invoke("hello", []byte("Host"))
 	if err == nil {
 		fmt.Printf("Message from guest: %s\n", string(result))
 	}

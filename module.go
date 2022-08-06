@@ -1,7 +1,6 @@
 package wasmexec
 
 import (
-	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
@@ -443,7 +442,7 @@ func (mod *Module) Call(name string, args ...any) (any, error) {
 }
 
 // Invoke calls operation with the specified payload and returns a []byte payload.
-func (mod *Module) Invoke(ctx context.Context, operation string, payload []byte) ([]byte, error) {
+func (mod *Module) Invoke(operation string, payload []byte) ([]byte, error) {
 	mod.invokeContext = newInvokeContext()
 
 	_, err := mod.Call("__guest_call", operation, payload)
@@ -451,14 +450,8 @@ func (mod *Module) Invoke(ctx context.Context, operation string, payload []byte)
 		return nil, err
 	}
 
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-
-	case ok := <-mod.invokeContext.success:
-		if !ok {
-			return nil, errors.New(mod.invokeContext.guestErr)
-		}
+	if ok := <-mod.invokeContext.success; !ok {
+		return nil, errors.New(mod.invokeContext.guestErr)
 	}
 
 	return mod.invokeContext.guestResp, nil

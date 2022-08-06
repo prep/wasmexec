@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -122,18 +121,28 @@ func run(filename string) error {
 		return err
 	}
 
+	args := []string{filename, "-runtime=wasmer", "arg1", "arg2"}
+	envs := []string{"HOME=/", "PWD=/home/test"}
+
+	// Set the args and the environment variables.
+	argc, argv, err := wasmexec.SetArgs(instance.Memory, args, envs)
+	if err != nil {
+		return err
+	}
+
+	// Fetch the "run" function and call it. This starts the program.
 	runFn, err := instance.Exports.GetFunction("run")
 	if err != nil {
 		return err
 	}
 
-	_, err = runFn(0, 0)
+	_, err = runFn(argc, argv)
 	if err != nil {
 		return err
 	}
 
 	// Silently fail, because not all examples implement waPC.
-	result, err := gomod.Invoke(context.TODO(), "hello", []byte("Host"))
+	result, err := gomod.Invoke("hello", []byte("Host"))
 	if err == nil {
 		fmt.Printf("Message from guest: %s\n", string(result))
 	}
