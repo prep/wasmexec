@@ -1,4 +1,4 @@
-# wasmexec
+# wasmexec [![Go Report Card](https://goreportcard.com/badge/github.com/prep/wasmexec)](https://goreportcard.com/report/github.com/prep/wasmexec) [![GoDoc](https://godoc.org/github.com/prep/wasmexec?status.svg)](https://godoc.org/github.com/prep/wasmexec)
 wasmexec is runtime-agnostic implementation of Go's [wasm_exec.js](https://github.com/golang/go/blob/master/misc/wasm/wasm_exec.js) in Go. It currently has import hooks for [wasmer](wasmerexec/), [wasmtime](wasmtimexec/) and [wazero](wazeroexec/). Each runtime-dedicated package has its own example of an implementation that can run any of the [examples](examples/).
 
 ## 1. Minimum implementation
